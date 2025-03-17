@@ -2,8 +2,6 @@ import os
 import launch
 import launch_ros
 from ament_index_python.packages import get_package_share_directory
-from launch.conditions import IfCondition, UnlessCondition
-from launch.substitutions import LaunchConfiguration
 from launch_param_builder import ParameterBuilder
 from moveit_configs_utils import MoveItConfigsBuilder
 
@@ -13,12 +11,8 @@ def generate_launch_description():
         MoveItConfigsBuilder("marvin")
         .robot_description(file_path="config/marvin.urdf.xacro")
         .joint_limits(file_path="config/joint_limits.yaml")
+        .robot_description_kinematics()
         .to_moveit_configs()
-    )
-
-    # Launch Servo as a standalone node or as a "node component" for better latency/efficiency
-    launch_as_standalone_node = LaunchConfiguration(
-        "launch_as_standalone_node", default="false"
     )
 
     # Get parameters for the Servo node
@@ -34,8 +28,7 @@ def generate_launch_description():
 
     # RViz
     rviz_config_file = (
-        get_package_share_directory("marvin_control")
-        + "/config/marvin_rviz_config.rviz"
+        get_package_share_directory("marvin_control") + "/config/marvin_rviz_config.rviz"
     )
     rviz_node = launch_ros.actions.Node(
         package="rviz2",
@@ -85,28 +78,11 @@ def generate_launch_description():
 
     # Launch as much as possible in components
     container = launch_ros.actions.ComposableNodeContainer(
-        name="marvin_servo_demo_container",
+        name="moveit_servo_demo_container",
         namespace="/",
         package="rclcpp_components",
         executable="component_container_mt",
         composable_node_descriptions=[
-            # Example of launching Servo as a node component
-            # Launching as a node component makes ROS 2 intraprocess communication more efficient.
-            launch_ros.descriptions.ComposableNode(
-                package="moveit_servo",
-                plugin="moveit_servo::ServoNode",
-                name="servo_node",
-                parameters=[
-                    servo_params,
-                    acceleration_filter_update_period,
-                    planning_group_name,
-                    moveit_config.robot_description,
-                    moveit_config.robot_description_semantic,
-                    moveit_config.robot_description_kinematics,
-                    moveit_config.joint_limits,
-                ],
-                condition=UnlessCondition(launch_as_standalone_node),
-            ),
             launch_ros.descriptions.ComposableNode(
                 package="robot_state_publisher",
                 plugin="robot_state_publisher::RobotStatePublisher",
@@ -122,12 +98,11 @@ def generate_launch_description():
         ],
         output="screen",
     )
-
-    # Standalone MoveIt Servo Node (if not using a container)
+    # Launch a standalone Servo node.
+    # As opposed to a node component, this may be necessary (for example) if Servo is running on a different PC
     servo_node = launch_ros.actions.Node(
-        package="moveit_servo",
-        executable="servo_node",
-        name="servo_node",
+        package="marvin_control",
+        executable="demo_joint_jog",
         parameters=[
             servo_params,
             acceleration_filter_update_period,
@@ -138,26 +113,15 @@ def generate_launch_description():
             moveit_config.joint_limits,
         ],
         output="screen",
-        condition=IfCondition(launch_as_standalone_node),
     )
 
-    # Pose Tracking Node
-    pose_tracking_node = launch_ros.actions.Node(
-        package="marvin_control",
-        executable="pose_tracking",
-        name="pose_tracking",
-        output="screen",
+    return launch.LaunchDescription(
+        [
+            rviz_node,
+            ros2_control_node,
+            joint_state_broadcaster_spawner,
+            marvin_controller_spawner,
+            servo_node,
+            container,
+        ]
     )
-    
-    
-    return launch.LaunchDescription([
-        rviz_node,
-        ros2_control_node,
-        joint_state_broadcaster_spawner,
-        marvin_controller_spawner,
-        #joint_trajectory_publisher_node,  # ✅ Joint trajectory publisher (NEW)
-        #servo_node,  # ✅ MoveIt Servo Node (if standalone)
-        container,  # ✅ MoveIt Servo in container mode
-        #launch.actions.TimerAction(period=5.0, actions=[marvin_controller_spawner]),  # ✅ Delay controller spawner (NEW)
-        launch.actions.TimerAction(period=8.0, actions=[pose_tracking_node]),  # ✅ Delay pose tracking (NEW)
-    ])
