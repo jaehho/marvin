@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(moveit_servo LANGUAGES CXX)
+project(marvin_control LANGUAGES CXX)
 
 # Common cmake code applied to all moveit packages
 find_package(moveit_common REQUIRED)
@@ -66,12 +66,12 @@ rclcpp_components_register_node(moveit_servo_lib_ros PLUGIN
 # ##############################################################################
 
 # Executable node for the joint jog demo
-add_executable(demo_joint_jog src/demo_joint_jog.cpp)
+add_executable(demo_joint_jog executables/demo_joint_jog.cpp)
 target_link_libraries(demo_joint_jog moveit_servo_lib_cpp)
 ament_target_dependencies(demo_joint_jog ${THIS_PACKAGE_INCLUDE_DEPENDS})
 
 #HELLO MOVEIT
-add_executable(hello_moveit src/hello_moveit.cpp)
+add_executable(hello_moveit executables/hello_moveit.cpp)
 target_include_directories(hello_moveit PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include/${PROJECT_NAME}>)
@@ -83,7 +83,7 @@ ament_target_dependencies(
 )
 
 #ORIGINAL PUBLISHER
-add_executable(publisher src/publisher.cpp)
+add_executable(publisher executables/publisher.cpp)
 ament_target_dependencies(
   publisher
   "rclcpp"
@@ -91,7 +91,7 @@ ament_target_dependencies(
 )
 
 #ORIGINAL SUBSCRIBER
-add_executable(subscriber src/subscriber.cpp)
+add_executable(subscriber executables/subscriber.cpp)
 target_include_directories(subscriber PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include/${PROJECT_NAME}>)
@@ -111,7 +111,7 @@ ament_target_dependencies(
 # Install Libraries
 install(
   TARGETS moveit_servo_lib_cpp moveit_servo_lib_parameters
-  EXPORT moveit_servoTargets
+  EXPORT ${PROJECT_NAME}Targets
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib
   RUNTIME DESTINATION bin
@@ -121,14 +121,14 @@ install(
 # Install Binaries
 install(
   TARGETS demo_joint_jog servo_node hello_moveit publisher subscriber
-  DESTINATION lib/marvin_control)
+  DESTINATION lib/${PROJECT_NAME})  # Updated to use PROJECT_NAME for consistency
 
 # Install include, launch, config directories
 install(DIRECTORY include/ DESTINATION include/moveit_servo)
-install(DIRECTORY launch DESTINATION share/marvin_control)
-install(DIRECTORY config DESTINATION share/marvin_control)
+install(DIRECTORY launch DESTINATION share/${PROJECT_NAME})  # Updated to use PROJECT_NAME for consistency
+install(DIRECTORY config DESTINATION share/${PROJECT_NAME})  # Updated to use PROJECT_NAME for consistency
 
-ament_export_targets(moveit_servoTargets HAS_LIBRARY_TARGET)
+ament_export_targets(${PROJECT_NAME}Targets HAS_LIBRARY_TARGET)
 ament_export_dependencies(${THIS_PACKAGE_INCLUDE_DEPENDS})
 
 ament_package()
