@@ -24,7 +24,7 @@ def generate_launch_description():
 
     # This sets the update rate and planning group name for the acceleration limiting filter.
     acceleration_filter_update_period = {"update_period": 0.01}
-    planning_group_name = {"planning_group_name": "marvin"}
+    planning_group_name = {"planning_group_name": "marvin_arms"}
 
     # RViz
     rviz_config_file = (
@@ -70,10 +70,10 @@ def generate_launch_description():
         ],
     )
 
-    marvin_controller_spawner = launch_ros.actions.Node(
+    marvin_arms_controller_spawner = launch_ros.actions.Node(
         package="controller_manager",
         executable="spawner",
-        arguments=["marvin_controller", "-c", "/controller_manager"],
+        arguments=["marvin_arms_controller", "-c", "/controller_manager"],
     )
 
     # Launch as much as possible in components
@@ -120,7 +120,7 @@ def generate_launch_description():
             rviz_node,
             ros2_control_node,
             joint_state_broadcaster_spawner,
-            marvin_controller_spawner,
+            marvin_arms_controller_spawner,
             servo_node,
             container,
         ]

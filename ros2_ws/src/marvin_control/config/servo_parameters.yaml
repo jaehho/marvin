@@ -149,7 +149,7 @@ servo:
   command_out_topic: {
     type: string,
     read_only: true,
-    default_value: "/marvin_controller/joint_trajectory",
+    default_value: "/marvin_arms_controller/joint_trajectory",
     description: "The topic on which servo will publish the joint trajectory \
                   Change this to the topic your controller requires."
   }

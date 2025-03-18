@@ -7,7 +7,7 @@ moveit_setup_assistant_config:
   package_settings:
     author_name: Sophia Klymchuk
     author_email: sophia.klymchuk@cooper.edu
-    generated_timestamp: 1733107557
+    generated_timestamp: 1742263687
   control_xacro:
     command:
       - position
