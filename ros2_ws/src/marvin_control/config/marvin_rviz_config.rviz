@@ -117,7 +117,7 @@ Visualization Manager:
             Show Trail: false
             Value: true
         Robot Alpha: 1
-        Show Robot Collision: false
+        Show Robot Collision: true
         Show Robot Visual: true
     - Class: rviz_default_plugins/TF
       Enabled: true
