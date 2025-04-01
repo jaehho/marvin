@@ -38,7 +38,7 @@ is_primary_planning_scene_monitor: true
 check_octomap_collisions: false  # Check collision against the octomap (if a 3D sensor plugin is available)
 
 ## MoveIt properties
-move_group_name: marvin  # Often 'manipulator' or 'arm'
+move_group_name: marvin_arms  # Often 'manipulator' or 'arm'
 
 ## Configure handling of singularities and joint limits
 lower_singularity_threshold: 30.0  # Start decelerating when the condition number hits this (close to singularity)

@@ -30,12 +30,12 @@ def generate_launch_description():
 
     # This sets the update rate and planning group name for the acceleration limiting filter.
     acceleration_filter_update_period = {"update_period": 0.01}
-    planning_group_name = {"planning_group_name": "marvin"}
+    planning_group_name = {"planning_group_name": "marvin_arms"}
 
     # RViz
     rviz_config_file = (
         get_package_share_directory("marvin_control")
-        + "/config/marvin_rviz_config.rviz"
+        + "/config/demo_rviz_config.rviz"
     )
     rviz_node = launch_ros.actions.Node(
         package="rviz2",
@@ -80,7 +80,7 @@ def generate_launch_description():
     marvin_controller_spawner = launch_ros.actions.Node(
         package="controller_manager",
         executable="spawner",
-        arguments=["marvin_controller", "-c", "/controller_manager"],
+        arguments=["marvin_arms_controller", "-c", "/controller_manager"],
     )
 
     # Launch as much as possible in components
@@ -140,6 +140,14 @@ def generate_launch_description():
         output="screen",
         condition=IfCondition(launch_as_standalone_node),
     )
+    
+    # Pose Tracking Node
+    pose_tracking_node = launch_ros.actions.Node(
+        package="marvin_control",
+        executable="pose_tracking",
+        name="pose_tracking",
+        output="screen",
+    )
 
     return launch.LaunchDescription(
         [
@@ -149,5 +157,6 @@ def generate_launch_description():
             marvin_controller_spawner,
             #servo_node,
             container,
+            pose_tracking_node,
         ]
     )

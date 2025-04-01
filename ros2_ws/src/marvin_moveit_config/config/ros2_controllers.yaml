@@ -3,27 +3,25 @@ controller_manager:
   ros__parameters:
     update_rate: 100  # Hz
 
+    marvin_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+
+
     left_hand_controller:
       type: position_controllers/GripperActionController
+
+
+    marvin_arms_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
 
 
     right_hand_controller:
       type: position_controllers/GripperActionController
 
 
-    marvin_controller:
-      type: joint_trajectory_controller/JointTrajectoryController
-
-
     joint_state_broadcaster:
       type: joint_state_broadcaster/JointStateBroadcaster
 
-left_hand_controller:
-  ros__parameters:
-    joint: gripper_left
-right_hand_controller:
-  ros__parameters:
-    joint: gripper_right
 marvin_controller:
   ros__parameters:
     joints:
@@ -41,3 +39,26 @@ marvin_controller:
       - position
       - velocity
     allow_nonzero_velocity_at_trajectory_end: true
+left_hand_controller:
+  ros__parameters:
+    joint: gripper_left
+marvin_arms_controller:
+  ros__parameters:
+    joints:
+      - joint1_left
+      - joint2_left
+      - joint3_left
+      - joint4_left
+      - joint1_right
+      - joint2_right
+      - joint3_right
+      - joint4_right
+    command_interfaces:
+      - position
+    state_interfaces:
+      - position
+      - velocity
+    allow_nonzero_velocity_at_trajectory_end: true
+right_hand_controller:
+  ros__parameters:
+    joint: gripper_right

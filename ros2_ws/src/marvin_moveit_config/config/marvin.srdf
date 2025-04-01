@@ -26,10 +26,13 @@
         <chain base_link="link1_left" tip_link="link5_left"/>
     </group>
     <group name="marvin">
-        <group name="right_arm"/>
-        <group name="left_arm"/>
         <group name="right_hand"/>
         <group name="left_hand"/>
+        <group name="marvin_arms"/>
+    </group>
+    <group name="marvin_arms">
+        <group name="left_arm"/>
+        <group name="right_arm"/>
     </group>
     <!--END EFFECTOR: Purpose: Represent information about an end effector.-->
     <end_effector name="left_hand" parent_link="link5_left" group="left_hand"/>
