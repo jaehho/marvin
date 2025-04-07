@@ -29,10 +29,15 @@ async def run():
     await pc.setLocalDescription(offer)
 
     async with aiohttp.ClientSession() as session:
+        # Submit the offer
         async with session.post(f"{SIGNALING_URL}/offer", json={
             "sdp": pc.localDescription.sdp,
             "type": pc.localDescription.type
         }) as resp:
+            print("Posted offer:", await resp.text())
+
+        # Now wait for the answer from the other peer
+        async with session.get(f"{SIGNALING_URL}/get-answer") as resp:
             answer = await resp.json()
             if "sdp" not in answer or "type" not in answer:
                 raise Exception("Invalid answer received")
