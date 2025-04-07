@@ -1,71 +1,78 @@
-import asyncio, json, uuid
+# client.py
+import asyncio
+import json
+import websockets
 from aiortc import RTCPeerConnection, RTCSessionDescription, RTCIceCandidate
-import aiohttp
 
-SIGNALING_URL = "ws://24.193.235.114:8080/ws"
-ROOM_ID = "my-room"
-PEER_ID = str(uuid.uuid4())[:8]
+async def run_client():
+    uri = "ws://24.193.235.114:8080"
+    async with websockets.connect(uri) as ws:
+        # Use a unique id for the client.
+        client_id = "client1"
+        await ws.send(json.dumps({
+            "action": "register",
+            "role": "client",
+            "id": client_id
+        }))
+        print(f"Registered as client with id {client_id}.")
 
-async def run():
-    pc = RTCPeerConnection()
+        pc = RTCPeerConnection()
 
-    @pc.on("iceconnectionstatechange")
-    def on_state_change():
-        print("ICE:", pc.iceConnectionState)
+        # Create a data channel for bidirectional communication.
+        channel = pc.createDataChannel("chat")
 
-    channel = pc.createDataChannel("chat")
+        @channel.on("open")
+        def on_open():
+            print("Data channel is open!")
+            channel.send("Hello from client!")
 
-    @channel.on("open")
-    def on_open():
-        print("Data channel opened")
-        channel.send("Hello from peer " + PEER_ID)
+        @channel.on("message")
+        def on_message(message):
+            print("Received message from host:", message)
 
-    @channel.on("message")
-    def on_msg(msg):
-        print("Received from host:", msg)
+        @pc.on("icecandidate")
+        async def on_icecandidate(event):
+            candidate = event.candidate
+            if candidate:
+                candidate_message = json.dumps({
+                    "type": "candidate",
+                    "candidate": {
+                        "candidate": candidate.candidate,
+                        "sdpMid": candidate.sdpMid,
+                        "sdpMLineIndex": candidate.sdpMLineIndex
+                    },
+                    "target": "host",
+                    "from": client_id
+                })
+                await ws.send(candidate_message)
 
-    @pc.on("icecandidate")
-    async def on_candidate(candidate):
-        if candidate:
-            await ws.send_json({
-                "type": "candidate",
-                "room": ROOM_ID,
-                "peer_id": PEER_ID,
-                "data": {
-                    "candidate": candidate.sdp,
-                    "sdpMid": candidate.sdpMid,
-                    "sdpMLineIndex": candidate.sdpMLineIndex
-                }
-            })
+        # Create and send the SDP offer.
+        offer = await pc.createOffer()
+        await pc.setLocalDescription(offer)
+        offer_message = json.dumps({
+            "type": "offer",
+            "sdp": pc.localDescription.sdp,
+            "target": "host",
+            "from": client_id
+        })
+        await ws.send(offer_message)
 
-    offer = await pc.createOffer()
-    await pc.setLocalDescription(offer)
+        # Listen for messages (answer and ICE candidates) from the signaling server.
+        async for message in ws:
+            data = json.loads(message)
+            msg_type = data.get("type")
+            if msg_type == "answer":
+                print("Received answer from host.")
+                answer = RTCSessionDescription(sdp=data["sdp"], type="answer")
+                await pc.setRemoteDescription(answer)
+            elif msg_type == "candidate":
+                candidate_data = data["candidate"]
+                candidate = RTCIceCandidate(
+                    candidate=candidate_data["candidate"],
+                    sdpMid=candidate_data["sdpMid"],
+                    sdpMLineIndex=candidate_data["sdpMLineIndex"]
+                )
+                await pc.addIceCandidate(candidate)
 
-    async with aiohttp.ClientSession() as session:
-        async with session.ws_connect(SIGNALING_URL) as ws:
-            await ws.send_json({"action": "join", "room": ROOM_ID, "peer_id": PEER_ID})
-            await ws.send_json({
-                "type": "offer",
-                "room": ROOM_ID,
-                "peer_id": PEER_ID,
-                "data": {
-                    "sdp": pc.localDescription.sdp,
-                    "type": pc.localDescription.type
-                }
-            })
-
-            async for msg in ws:
-                data = json.loads(msg.data)
-
-                if data["type"] == "answer":
-                    await pc.setRemoteDescription(RTCSessionDescription(**data["data"]))
-
-                elif data["type"] == "candidate-host":
-                    c = data["data"]
-                    await pc.addIceCandidate(RTCIceCandidate(
-                        sdpMid=c["sdpMid"],
-                        sdpMLineIndex=c["sdpMLineIndex"],
-                        candidate=c["candidate"]
-                    ))
-
-asyncio.run(run())
+if __name__ == "__main__":
+    asyncio.run(run_client())
