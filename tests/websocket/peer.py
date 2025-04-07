@@ -23,6 +23,7 @@ async def run():
 
     @pc.on("icecandidate")
     async def on_icecandidate(candidate):
+        print("ICE candidate:", candidate)
         if candidate and ws is not None:
             msg = {
                 "type": "candidate",
@@ -36,6 +37,7 @@ async def run():
 
     @pc.on("datachannel")
     def on_datachannel(channel):
+        print("Data channel received")
         @channel.on("message")
         def on_message(message):
             print("Received:", message)
