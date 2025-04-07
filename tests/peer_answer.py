@@ -1,13 +1,14 @@
 # peer_b.py
 import asyncio
 import json
-from aiortc import RTCPeerConnection, RTCSessionDescription
+from aiortc import RTCConfiguration, RTCPeerConnection, RTCSessionDescription
 import aiohttp
 
 from _config import TURN
 
 async def run():
-    pc = RTCPeerConnection(configuration={"iceServers": [TURN]})
+    config = RTCConfiguration(iceServers=[TURN])
+    pc = RTCPeerConnection(configuration=config)
 
     @pc.on("iceconnectionstatechange")
     def on_state_change():
