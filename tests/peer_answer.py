@@ -1,49 +1,40 @@
-# peer_b.py
+# peer_answer.py
 import asyncio
-import json
-from aiortc import RTCConfiguration, RTCPeerConnection, RTCSessionDescription
 import aiohttp
+from aiortc import RTCPeerConnection, RTCSessionDescription, RTCIceServer, RTCConfiguration
 
-from _config import TURN
+from _config import TURN, SIGNALING_URL
+
+config = RTCConfiguration(iceServers=[TURN])
 
 async def run():
-    config = RTCConfiguration(iceServers=[TURN])
     pc = RTCPeerConnection(configuration=config)
 
     @pc.on("iceconnectionstatechange")
     def on_state_change():
-        print("Connection state:", pc.iceConnectionState)
+        print("ICE state:", pc.iceConnectionState)
 
     @pc.on("datachannel")
     def on_datachannel(channel):
         @channel.on("message")
         def on_message(message):
             print("Received:", message)
-            channel.send("Hello from Peer B!")
+            channel.send("Hello from Peer B")
 
     async with aiohttp.ClientSession() as session:
-        while True:
-            async with session.post("http://24.193.235.114:8080/answer", json={
-                "sdp": "",
-                "type": ""
-            }) as resp:
-                if resp.status == 200:
-                    break
-            await asyncio.sleep(0.5)
-
-        async with session.get("http://24.193.235.114:8080/offer") as resp:
+        async with session.post(f"{SIGNALING_URL}/offer", json={}) as resp:
+            if resp.status != 200:
+                raise Exception("No offer available")
             offer = await resp.json()
 
         await pc.setRemoteDescription(RTCSessionDescription(**offer))
         answer = await pc.createAnswer()
         await pc.setLocalDescription(answer)
 
-        async with session.post("http://192.168.1.100:8080/answer", json={
+        await session.post(f"{SIGNALING_URL}/answer", json={
             "sdp": pc.localDescription.sdp,
             "type": pc.localDescription.type
-        }) as resp:
-            print("Sent answer")
-
+        })
 
     await asyncio.sleep(60)
 

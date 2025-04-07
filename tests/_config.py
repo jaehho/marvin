@@ -5,3 +5,5 @@ TURN = RTCIceServer(
     username="jaeho",
     credential="2121"
 )
+
+SIGNALING_URL = "http://24.193.235.114:8080"  # Replace with your signaling server IP
