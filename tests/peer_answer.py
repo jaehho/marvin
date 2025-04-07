@@ -22,7 +22,7 @@ async def run():
             channel.send("Hello from Peer B")
 
     async with aiohttp.ClientSession() as session:
-        async with session.post(f"{SIGNALING_URL}/offer", json={}) as resp:
+        async with session.get(f"{SIGNALING_URL}/offer") as resp:
             if resp.status != 200:
                 raise Exception("No offer available")
             offer = await resp.json()
