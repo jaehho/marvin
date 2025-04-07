@@ -23,7 +23,7 @@ async def run():
 
     async with aiohttp.ClientSession() as session:
         while True:
-            async with session.post("http://localhost:8080/answer", json={
+            async with session.post("24.193.235.114:8080/answer", json={
                 "sdp": "",
                 "type": ""
             }) as resp:
@@ -31,14 +31,14 @@ async def run():
                     break
             await asyncio.sleep(0.5)
 
-        async with session.get("http://localhost:8080/offer") as resp:
+        async with session.get("24.193.235.114:8080/offer") as resp:
             offer = await resp.json()
 
         await pc.setRemoteDescription(RTCSessionDescription(**offer))
         answer = await pc.createAnswer()
         await pc.setLocalDescription(answer)
 
-        async with session.post("http://localhost:8080/answer", json={
+        async with session.post("24.193.235.114:8080/answer", json={
             "sdp": pc.localDescription.sdp,
             "type": pc.localDescription.type
         }) as resp:

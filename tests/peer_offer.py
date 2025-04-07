@@ -30,7 +30,7 @@ async def run():
     await pc.setLocalDescription(offer)
 
     async with aiohttp.ClientSession() as session:
-        async with session.post("http://localhost:8080/offer", json={
+        async with session.post("24.193.235.114:8080/offer", json={
             "sdp": pc.localDescription.sdp,
             "type": pc.localDescription.type
         }) as resp:
