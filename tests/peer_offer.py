@@ -29,13 +29,16 @@ async def run():
     offer = await pc.createOffer()
     await pc.setLocalDescription(offer)
 
-    async with aiohttp.ClientSession() as session:
-        async with session.post("24.193.235.114:8080/offer", json={
-            "sdp": pc.localDescription.sdp,
-            "type": pc.localDescription.type
-        }) as resp:
-            answer = await resp.json()
-            await pc.setRemoteDescription(RTCSessionDescription(**answer))
+    async with session.post("http://192.168.1.100:8080/offer", json={
+        "sdp": pc.localDescription.sdp,
+        "type": pc.localDescription.type
+    }) as resp:
+        answer = await resp.json()
+
+        if "sdp" not in answer or "type" not in answer or not answer["sdp"]:
+            raise Exception("Invalid answer received from signaling server")
+
+        await pc.setRemoteDescription(RTCSessionDescription(**answer))
 
     await asyncio.sleep(60)
 
