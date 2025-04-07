@@ -3,8 +3,8 @@ from aiortc import RTCIceServer
 
 ICE_SERVERS = [
     RTCIceServer(
-        urls="turn:your.turn.server:3478",
-        username="your-username",
-        credential="your-password"
+        urls="turn:24.193.235.114:3478",
+        username="jaeho",
+        credential="2121"
     )
 ]
