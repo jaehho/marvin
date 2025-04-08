@@ -157,6 +157,6 @@ def generate_launch_description():
             marvin_controller_spawner,
             #servo_node,
             container,
-            pose_tracking_node,
+            pose_tracking_node
         ]
     )
