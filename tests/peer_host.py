@@ -1,31 +1,41 @@
-# host.py
 import asyncio
 import json
+import logging
+import argparse
 import websockets
 from aiortc import RTCPeerConnection, RTCSessionDescription, RTCIceCandidate
 
-# Mapping from client id to RTCPeerConnection instance.
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s: %(message)s"
+)
+
+# Map client IDs to their RTCPeerConnection instances.
 peer_connections = {}
 
-async def signaling_handler():
-    uri = "ws://24.193.235.114:8080"
-    async with websockets.connect(uri) as ws:
+async def signaling_handler(signaling_uri: str):
+    async with websockets.connect(signaling_uri, ping_interval=30, ping_timeout=60) as ws:
         # Register as host.
-        await ws.send(json.dumps({
+        registration = {
             "action": "register",
             "role": "host",
             "id": "host"
-        }))
-        print("Registered as host.")
+        }
+        await ws.send(json.dumps(registration))
+        logging.info("Registered as host (id: 'host').")
 
         async for message in ws:
-            data = json.loads(message)
+            try:
+                data = json.loads(message)
+            except json.JSONDecodeError:
+                logging.error("Received invalid JSON message.")
+                continue
+
             sender = data.get("from")
             msg_type = data.get("type")
 
             if msg_type == "offer":
-                print(f"Received offer from client {sender}.")
-                # Create a new RTCPeerConnection for this client.
+                logging.info("Received offer from client '%s'.", sender)
                 pc = RTCPeerConnection()
                 peer_connections[sender] = pc
 
@@ -44,44 +54,59 @@ async def signaling_handler():
                             "from": "host"
                         })
                         await ws.send(candidate_message)
+                        logging.info("Sent ICE candidate to client '%s'.", client_id)
 
                 @pc.on("datachannel")
                 def on_datachannel(channel):
-                    print(f"Data channel from {sender}: {channel.label}")
-
+                    logging.info("Data channel established with client '%s': %s", sender, channel.label)
                     @channel.on("message")
                     def on_message(message):
-                        print(f"Received message from {sender}: {message}")
-                        # (Optional) Process or broadcast the message.
+                        logging.info("Received data channel message from '%s': %s", sender, message)
 
-                # Set remote description and create/send answer.
-                offer = RTCSessionDescription(sdp=data["sdp"], type="offer")
-                await pc.setRemoteDescription(offer)
-                answer = await pc.createAnswer()
-                await pc.setLocalDescription(answer)
-                answer_message = json.dumps({
-                    "type": "answer",
-                    "sdp": pc.localDescription.sdp,
-                    "target": sender,
-                    "from": "host"
-                })
-                await ws.send(answer_message)
+                try:
+                    offer = RTCSessionDescription(sdp=data["sdp"], type="offer")
+                    await pc.setRemoteDescription(offer)
+                    answer = await pc.createAnswer()
+                    await pc.setLocalDescription(answer)
+                    answer_message = json.dumps({
+                        "type": "answer",
+                        "sdp": pc.localDescription.sdp,
+                        "target": sender,
+                        "from": "host"
+                    })
+                    await ws.send(answer_message)
+                    logging.info("Sent answer to client '%s'.", sender)
+                except Exception as e:
+                    logging.error("Error processing offer from '%s': %s", sender, e)
 
             elif msg_type == "candidate":
                 if sender in peer_connections:
                     pc = peer_connections[sender]
-                    candidate_data = data["candidate"]
-                    candidate = RTCIceCandidate(
-                        candidate=candidate_data["candidate"],
-                        sdpMid=candidate_data["sdpMid"],
-                        sdpMLineIndex=candidate_data["sdpMLineIndex"]
-                    )
-                    await pc.addIceCandidate(candidate)
+                    candidate_data = data.get("candidate")
+                    if candidate_data:
+                        candidate = RTCIceCandidate(
+                            candidate=candidate_data.get("candidate"),
+                            sdpMid=candidate_data.get("sdpMid"),
+                            sdpMLineIndex=candidate_data.get("sdpMLineIndex")
+                        )
+                        await pc.addIceCandidate(candidate)
+                        logging.info("Added ICE candidate from client '%s'.", sender)
+                    else:
+                        logging.warning("Missing candidate data from client '%s'.", sender)
                 else:
-                    print(f"No peer connection found for client {sender}.")
+                    logging.warning("No peer connection found for client '%s'.", sender)
+            else:
+                logging.warning("Unknown message type '%s' from '%s'.", msg_type, sender)
 
-async def main():
-    await signaling_handler()
+async def main(signaling_uri: str):
+    try:
+        await signaling_handler(signaling_uri)
+    except Exception as e:
+        logging.error("Error in signaling handler: %s", e)
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    parser = argparse.ArgumentParser(description="Peer Host for Hub and Spoke System")
+    parser.add_argument("--signaling", type=str, default="ws://24.193.235.114:8080",
+                        help="Signaling server URI (e.g. ws://<server>:8080)")
+    args = parser.parse_args()
+    asyncio.run(main(args.signaling))
