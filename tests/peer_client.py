@@ -1,34 +1,52 @@
-# client.py
 import asyncio
 import json
+import logging
+import argparse
 import websockets
 from aiortc import RTCPeerConnection, RTCSessionDescription, RTCIceCandidate
 
-async def run_client():
-    uri = "ws://24.193.235.114:8080"
-    async with websockets.connect(uri) as ws:
-        # Use a unique id for the client.
-        client_id = "client1"
-        await ws.send(json.dumps({
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s: %(message)s"
+)
+
+async def send_channel_pings(channel, interval=5):
+    """Periodically send a ping over the data channel to keep ICE consent alive."""
+    while True:
+        try:
+            channel.send("ping")
+            logging.info("Sent channel ping")
+            await asyncio.sleep(interval)
+        except Exception as e:
+            logging.error("Error sending channel ping: %s", e)
+            break
+
+async def run_client(signaling_uri: str, client_id: str):
+    async with websockets.connect(signaling_uri, ping_interval=30, ping_timeout=60) as ws:
+        # Register as a client.
+        registration = {
             "action": "register",
             "role": "client",
             "id": client_id
-        }))
-        print(f"Registered as client with id {client_id}.")
+        }
+        await ws.send(json.dumps(registration))
+        logging.info("Registered as client (id: '%s').", client_id)
 
         pc = RTCPeerConnection()
 
-        # Create a data channel for bidirectional communication.
+        # Create a data channel.
         channel = pc.createDataChannel("chat")
 
         @channel.on("open")
         def on_open():
-            print("Data channel is open!")
+            logging.info("Data channel is open!")
             channel.send("Hello from client!")
+            # Start sending pings every 5 seconds.
+            asyncio.create_task(send_channel_pings(channel, interval=5))
 
         @channel.on("message")
         def on_message(message):
-            print("Received message from host:", message)
+            logging.info("Received message from host: %s", message)
 
         @pc.on("icecandidate")
         async def on_icecandidate(event):
@@ -45,34 +63,63 @@ async def run_client():
                     "from": client_id
                 })
                 await ws.send(candidate_message)
+                logging.info("Sent ICE candidate to host.")
 
-        # Create and send the SDP offer.
-        offer = await pc.createOffer()
-        await pc.setLocalDescription(offer)
-        offer_message = json.dumps({
-            "type": "offer",
-            "sdp": pc.localDescription.sdp,
-            "target": "host",
-            "from": client_id
-        })
-        await ws.send(offer_message)
+        try:
+            # Create and send the SDP offer.
+            offer = await pc.createOffer()
+            await pc.setLocalDescription(offer)
+            offer_message = json.dumps({
+                "type": "offer",
+                "sdp": pc.localDescription.sdp,
+                "target": "host",
+                "from": client_id
+            })
+            await ws.send(offer_message)
+            logging.info("Sent offer to host.")
+        except Exception as e:
+            logging.error("Error creating/sending offer: %s", e)
 
-        # Listen for messages (answer and ICE candidates) from the signaling server.
         async for message in ws:
-            data = json.loads(message)
+            try:
+                data = json.loads(message)
+            except json.JSONDecodeError:
+                logging.error("Received invalid JSON message.")
+                continue
+
             msg_type = data.get("type")
             if msg_type == "answer":
-                print("Received answer from host.")
-                answer = RTCSessionDescription(sdp=data["sdp"], type="answer")
-                await pc.setRemoteDescription(answer)
+                logging.info("Received answer from host.")
+                try:
+                    answer = RTCSessionDescription(sdp=data["sdp"], type="answer")
+                    await pc.setRemoteDescription(answer)
+                except Exception as e:
+                    logging.error("Error setting remote description: %s", e)
             elif msg_type == "candidate":
-                candidate_data = data["candidate"]
-                candidate = RTCIceCandidate(
-                    candidate=candidate_data["candidate"],
-                    sdpMid=candidate_data["sdpMid"],
-                    sdpMLineIndex=candidate_data["sdpMLineIndex"]
-                )
-                await pc.addIceCandidate(candidate)
+                candidate_data = data.get("candidate")
+                if candidate_data:
+                    candidate = RTCIceCandidate(
+                        candidate=candidate_data.get("candidate"),
+                        sdpMid=candidate_data.get("sdpMid"),
+                        sdpMLineIndex=candidate_data.get("sdpMLineIndex")
+                    )
+                    await pc.addIceCandidate(candidate)
+                    logging.info("Added ICE candidate from host.")
+                else:
+                    logging.warning("Candidate data missing in candidate message.")
+            else:
+                logging.warning("Unknown message type received: %s", msg_type)
 
 if __name__ == "__main__":
-    asyncio.run(run_client())
+    parser = argparse.ArgumentParser(description="Peer Client for Hub and Spoke System")
+    parser.add_argument("--signaling", type=str, default="ws://24.193.235.114:8080",
+                        help="Signaling server URI (e.g. ws://<server>:8080)")
+    parser.add_argument("--id", type=str, default="client1", help="Unique client ID")
+    args = parser.parse_args()
+
+    try:
+        asyncio.run(run_client(args.signaling, args.id))
+    except KeyboardInterrupt:
+        logging.info("Client shutdown requested.")
+    except Exception as e:
+        logging.error("Error running client: %s", e)
