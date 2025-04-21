@@ -2,7 +2,7 @@ moveit_servo:
   ros__parameters:
     publish_period: 0.01
     max_expected_latency: 0.1
-    move_group_name: "marvin"
+    move_group_name: "marvin_arms"
     active_subgroup: ""
     pose_command_in_topic: "~/pose_target_cmds"
     cartesian_command_in_topic: "~/delta_twist_cmds"
@@ -17,7 +17,7 @@ moveit_servo:
     pose_tracking:
       linear_tolerance: 0.001
       angular_tolerance: 0.01
-    command_out_topic: "/marvin_controller/joint_trajectory"
+    command_out_topic: "/marvin_arms_controller/joint_trajectory"
     command_out_type: "trajectory_msgs/JointTrajectory"
     publish_joint_positions: true
     publish_joint_velocities: true

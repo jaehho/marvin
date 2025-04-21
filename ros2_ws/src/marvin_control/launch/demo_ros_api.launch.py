@@ -157,6 +157,6 @@ def generate_launch_description():
             marvin_controller_spawner,
             #servo_node,
             container,
-            pose_tracking_node
+            launch.actions.TimerAction(period=8.0, actions=[pose_tracking_node]),
         ]
     )
