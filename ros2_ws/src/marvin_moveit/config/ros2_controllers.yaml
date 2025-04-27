@@ -20,21 +20,21 @@ controller_manager:
 
 left_hand_controller:
   ros__parameters:
-    joint: gripper_left
+    joint: left_gripper
 right_hand_controller:
   ros__parameters:
-    joint: gripper_right
+    joint: right_gripper
 marvin_controller:
   ros__parameters:
     joints:
-      - joint1_left
-      - joint2_left
-      - joint3_left
-      - joint4_left
-      - joint1_right
-      - joint2_right
-      - joint3_right
-      - joint4_right
+      - left_joint1
+      - left_joint2
+      - left_joint3
+      - left_joint4
+      - right_joint1
+      - right_joint2
+      - right_joint3
+      - right_joint4
     command_interfaces:
       - position
     state_interfaces:

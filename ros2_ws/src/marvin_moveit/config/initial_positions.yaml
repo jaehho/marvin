@@ -1,13 +1,13 @@
 # Default initial positions for marvin's ros2_control fake system
 
 initial_positions:
-  gripper_left: 0
-  gripper_right: 0
-  joint1_left: 0
-  joint1_right: 0
-  joint2_left: 0
-  joint2_right: 0
-  joint3_left: 0
-  joint3_right: 0
-  joint4_left: 0
-  joint4_right: 0
+  left_gripper: 0
+  right_gripper: 0
+  left_joint1: 0
+  right_joint1: 0
+  left_joint2: 0
+  right_joint2: 0
+  left_joint3: 0
+  right_joint3: 0
+  left_joint4: 0
+  right_joint4: 0

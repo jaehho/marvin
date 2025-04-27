@@ -11,25 +11,25 @@ moveit_simple_controller_manager:
   left_hand_controller:
     type: GripperCommand
     joints:
-      - gripper_left
+      - left_gripper
     action_ns: gripper_cmd
     default: true
   right_hand_controller:
     type: GripperCommand
     joints:
-      - gripper_right
+      - right_gripper
     action_ns: gripper_cmd
     default: true
   marvin_controller:
     type: FollowJointTrajectory
     joints:
-      - joint1_left
-      - joint2_left
-      - joint3_left
-      - joint4_left
-      - joint1_right
-      - joint2_right
-      - joint3_right
-      - joint4_right
+      - left_joint1
+      - left_joint2
+      - left_joint3
+      - left_joint4
+      - right_joint1
+      - right_joint2
+      - right_joint3
+      - right_joint4
     action_ns: follow_joint_trajectory
     default: true

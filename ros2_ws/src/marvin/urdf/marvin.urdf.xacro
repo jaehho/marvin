@@ -45,14 +45,14 @@
   <xacro:property name="left_arm_origin_xyz" value="0.08 0 0"/>
   <joint name="left_arm_joint" type="fixed">
     <parent link="torso"/>
-    <child link="link1_left"/>
+    <child link="left_link1"/>
     <origin xyz="${left_arm_origin_xyz}" rpy="0 1.5708 0"/>
   </joint>
 
   <xacro:property name="right_arm_origin_xyz" value="-0.08 0 0"/>
   <joint name="right_arm_joint" type="fixed">
     <parent link="torso"/>
-    <child link="link1_right"/>
+    <child link="right_link1"/>
     <origin xyz="${right_arm_origin_xyz}" rpy="0 1.5708 3.1415926535"/> <!-- Rotate by pi -->
   </joint>
 

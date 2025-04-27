@@ -111,17 +111,17 @@
   </link>
   <joint name="left_arm_joint" type="fixed">
     <parent link="torso"/>
-    <child link="link1_left"/>
+    <child link="left_link1"/>
     <origin rpy="0 1.5708 0" xyz="0.08 0 0"/>
   </joint>
   <joint name="right_arm_joint" type="fixed">
     <parent link="torso"/>
-    <child link="link1_right"/>
+    <child link="right_link1"/>
     <origin rpy="0 1.5708 3.1415926535" xyz="-0.08 0 0"/>
     <!-- Rotate by pi -->
   </joint>
   <!-- Link 1 -->
-  <link name="link1_left">
+  <link name="left_link1">
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
@@ -143,15 +143,15 @@
     <parent link="left_arm_joint"/>
   </link>
   <!-- Joint 1 -->
-  <joint name="joint1_left" type="revolute">
-    <parent link="link1_left"/>
-    <child link="link2_left"/>
+  <joint name="left_joint1" type="revolute">
+    <parent link="left_link1"/>
+    <child link="left_link2"/>
     <origin rpy="0 0 0" xyz="0.012 0.0 0.017"/>
     <axis xyz="0 0 1"/>
     <limit effort="1" lower="-2.827433388230814" upper="2.827433388230814" velocity="4.8" acceleration="1.0"/>
   </joint>
   <!--  Link 2 -->
-  <link name="link2_left">
+  <link name="left_link2">
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0.019"/>
       <geometry>
@@ -172,15 +172,15 @@
     </inertial>
   </link>
   <!--  Joint 2 -->
-  <joint name="joint2_left" type="revolute">
-    <parent link="link2_left"/>
-    <child link="link3_left"/>
+  <joint name="left_joint2" type="revolute">
+    <parent link="left_link2"/>
+    <child link="left_link3"/>
     <origin rpy="0 0 0" xyz="0.0 0.0 0.0595"/>
     <axis xyz="0 1 0"/>
     <limit effort="1" lower="-1.790707812546182" upper="1.5707963267948966" velocity="4.8" acceleration="1.0"/>
   </joint>
   <!--  Link 3 -->
-  <link name="link3_left">
+  <link name="left_link3">
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
@@ -201,15 +201,15 @@
     </inertial>
   </link>
   <!--  Joint 3 -->
-  <joint name="joint3_left" type="revolute">
-    <parent link="link3_left"/>
-    <child link="link4_left"/>
+  <joint name="left_joint3" type="revolute">
+    <parent link="left_link3"/>
+    <child link="left_link4"/>
     <origin rpy="0 0 0" xyz="0.024 0 0.128"/>
     <axis xyz="0 1 0"/>
     <limit effort="1" lower="-0.9424777960769379" upper="1.382300767579509" velocity="4.8" acceleration="1.0"/>
   </joint>
   <!--  Link 4 -->
-  <link name="link4_left">
+  <link name="left_link4">
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
@@ -230,15 +230,15 @@
     </inertial>
   </link>
   <!--  Joint 4 -->
-  <joint name="joint4_left" type="revolute">
-    <parent link="link4_left"/>
-    <child link="link5_left"/>
+  <joint name="left_joint4" type="revolute">
+    <parent link="left_link4"/>
+    <child link="left_link5"/>
     <origin rpy="0 0 0" xyz="0.124 0.0 0.0"/>
     <axis xyz="0 1 0"/>
     <limit effort="1" lower="-1.790707812546182" upper="2.0420352248333655" velocity="4.8" acceleration="1.0"/>
   </joint>
   <!--  Link 5 -->
-  <link name="link5_left">
+  <link name="left_link5">
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
@@ -259,15 +259,15 @@
     </inertial>
   </link>
   <!--  Gripper joint -->
-  <joint name="gripper_left" type="prismatic">
-    <parent link="link5_left"/>
-    <child link="gripper_link_left"/>
+  <joint name="left_gripper" type="prismatic">
+    <parent link="left_link5"/>
+    <child link="left_gripper_link"/>
     <origin rpy="0 0 0" xyz="0.0817 0.021 0.0"/>
     <axis xyz="0 1 0"/>
     <limit effort="1" lower="-0.010" upper="0.019" velocity="4.8" acceleration="1.0"/>
   </joint>
   <!--  Gripper link -->
-  <link name="gripper_link_left">
+  <link name="left_gripper_link">
     <visual>
       <origin rpy="0 0 0" xyz="0.0 0.0 0"/>
       <geometry>
@@ -288,16 +288,16 @@
     </inertial>
   </link>
   <!--  Gripper joint sub -->
-  <joint name="gripper_sub_left" type="prismatic">
-    <parent link="link5_left"/>
-    <child link="gripper_link_sub_left"/>
+  <joint name="left_gripper_sub" type="prismatic">
+    <parent link="left_link5"/>
+    <child link="left_gripper_link_sub"/>
     <origin rpy="0 0 0" xyz="0.0817 -0.021 0"/>
     <axis xyz="0 -1 0"/>
     <limit effort="1" lower="-0.010" upper="0.019" velocity="4.8" acceleration="1.0"/>
-    <mimic joint="gripper_left" multiplier="1"/>
+    <mimic joint="left_gripper" multiplier="1"/>
   </joint>
   <!--  Gripper link sub -->
-  <link name="gripper_link_sub_left">
+  <link name="left_gripper_link_sub">
     <visual>
       <origin rpy="0 0 0" xyz="0.0 -0.0 0"/>
       <geometry>
@@ -318,13 +318,13 @@
     </inertial>
   </link>
   <!-- end effector joint -->
-  <joint name="end_effector_joint_left" type="fixed">
+  <joint name="left_end_effector_joint" type="fixed">
     <origin rpy="0 0 0" xyz="0.126 0.0 0.0"/>
-    <parent link="link5_left"/>
-    <child link="end_effector_link_left"/>
+    <parent link="left_link5"/>
+    <child link="left_end_effector_link"/>
   </joint>
   <!-- end effector link -->
-  <link name="end_effector_link_left">
+  <link name="left_end_effector_link">
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
@@ -340,7 +340,7 @@
   </link>
   <!-- Left Arm -->
   <!-- Link 1 -->
-  <link name="link1_right">
+  <link name="right_link1">
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
@@ -362,15 +362,15 @@
     <parent link="right_arm_joint"/>
   </link>
   <!-- Joint 1 -->
-  <joint name="joint1_right" type="revolute">
-    <parent link="link1_right"/>
-    <child link="link2_right"/>
+  <joint name="right_joint1" type="revolute">
+    <parent link="right_link1"/>
+    <child link="right_link2"/>
     <origin rpy="0 0 0" xyz="0.012 0.0 0.017"/>
     <axis xyz="0 0 1"/>
     <limit effort="1" lower="-2.827433388230814" upper="2.827433388230814" velocity="4.8" acceleration="1.0"/>
   </joint>
   <!--  Link 2 -->
-  <link name="link2_right">
+  <link name="right_link2">
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0.019"/>
       <geometry>
@@ -391,15 +391,15 @@
     </inertial>
   </link>
   <!--  Joint 2 -->
-  <joint name="joint2_right" type="revolute">
-    <parent link="link2_right"/>
-    <child link="link3_right"/>
+  <joint name="right_joint2" type="revolute">
+    <parent link="right_link2"/>
+    <child link="right_link3"/>
     <origin rpy="0 0 0" xyz="0.0 0.0 0.0595"/>
     <axis xyz="0 1 0"/>
     <limit effort="1" lower="-1.790707812546182" upper="1.5707963267948966" velocity="4.8" acceleration="1.0"/>
   </joint>
   <!--  Link 3 -->
-  <link name="link3_right">
+  <link name="right_link3">
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
@@ -420,15 +420,15 @@
     </inertial>
   </link>
   <!--  Joint 3 -->
-  <joint name="joint3_right" type="revolute">
-    <parent link="link3_right"/>
-    <child link="link4_right"/>
+  <joint name="right_joint3" type="revolute">
+    <parent link="right_link3"/>
+    <child link="right_link4"/>
     <origin rpy="0 0 0" xyz="0.024 0 0.128"/>
     <axis xyz="0 1 0"/>
     <limit effort="1" lower="-0.9424777960769379" upper="1.382300767579509" velocity="4.8" acceleration="1.0"/>
   </joint>
   <!--  Link 4 -->
-  <link name="link4_right">
+  <link name="right_link4">
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
@@ -449,15 +449,15 @@
     </inertial>
   </link>
   <!--  Joint 4 -->
-  <joint name="joint4_right" type="revolute">
-    <parent link="link4_right"/>
-    <child link="link5_right"/>
+  <joint name="right_joint4" type="revolute">
+    <parent link="right_link4"/>
+    <child link="right_link5"/>
     <origin rpy="0 0 0" xyz="0.124 0.0 0.0"/>
     <axis xyz="0 1 0"/>
     <limit effort="1" lower="-1.790707812546182" upper="2.0420352248333655" velocity="4.8" acceleration="1.0"/>
   </joint>
   <!--  Link 5 -->
-  <link name="link5_right">
+  <link name="right_link5">
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
@@ -478,15 +478,15 @@
     </inertial>
   </link>
   <!--  Gripper joint -->
-  <joint name="gripper_right" type="prismatic">
-    <parent link="link5_right"/>
-    <child link="gripper_link_right"/>
+  <joint name="right_gripper" type="prismatic">
+    <parent link="right_link5"/>
+    <child link="right_gripper_link"/>
     <origin rpy="0 0 0" xyz="0.0817 0.021 0.0"/>
     <axis xyz="0 1 0"/>
     <limit effort="1" lower="-0.010" upper="0.019" velocity="4.8" acceleration="1.0"/>
   </joint>
   <!--  Gripper link -->
-  <link name="gripper_link_right">
+  <link name="right_gripper_link">
     <visual>
       <origin rpy="0 0 0" xyz="0.0 0.0 0"/>
       <geometry>
@@ -507,16 +507,16 @@
     </inertial>
   </link>
   <!--  Gripper joint sub -->
-  <joint name="gripper_sub_right" type="prismatic">
-    <parent link="link5_right"/>
-    <child link="gripper_link_sub_right"/>
+  <joint name="right_gripper_sub" type="prismatic">
+    <parent link="right_link5"/>
+    <child link="right_gripper_link_sub"/>
     <origin rpy="0 0 0" xyz="0.0817 -0.021 0"/>
     <axis xyz="0 -1 0"/>
     <limit effort="1" lower="-0.010" upper="0.019" velocity="4.8" acceleration="1.0"/>
-    <mimic joint="gripper_right" multiplier="1"/>
+    <mimic joint="right_gripper" multiplier="1"/>
   </joint>
   <!--  Gripper link sub -->
-  <link name="gripper_link_sub_right">
+  <link name="right_gripper_link_sub">
     <visual>
       <origin rpy="0 0 0" xyz="0.0 -0.0 0"/>
       <geometry>
@@ -537,13 +537,13 @@
     </inertial>
   </link>
   <!-- end effector joint -->
-  <joint name="end_effector_joint_right" type="fixed">
+  <joint name="right_end_effector_joint" type="fixed">
     <origin rpy="0 0 0" xyz="0.126 0.0 0.0"/>
-    <parent link="link5_right"/>
-    <child link="end_effector_link_right"/>
+    <parent link="right_link5"/>
+    <child link="right_end_effector_link"/>
   </joint>
   <!-- end effector link -->
-  <link name="end_effector_link_right">
+  <link name="right_end_effector_link">
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
