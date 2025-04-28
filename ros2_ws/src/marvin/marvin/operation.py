@@ -1,173 +1,192 @@
-import rclpy
+#!/usr/bin/env python3
 import sys
+import termios
+import tty
+import threading
+import signal
 
-from open_manipulator_msgs.msg import KinematicsPose, OpenManipulatorState
-from open_manipulator_msgs.srv import SetJointPosition, SetKinematicsPose
+import rclpy
 from rclpy.node import Node
-from rclpy.qos import QoSProfile
-from sensor_msgs.msg import JointState
+from rclpy.action import ActionClient
+from std_srvs.srv import Trigger
+from control_msgs.msg import JointJog, GripperCommand as GripperCmdMsg
+from control_msgs.action import GripperCommand
+from builtin_interfaces.msg import Duration
 
-present_joint_angle = [0.0, 0.0, 0.0, 0.0, 0.0]
-present_effort = [0.0, 0.0, 0.0, 0.0, 0.0]
-goal_joint_angle = [0.0, 0.0, 0.0, 0.0, 0.0]
-prev_goal_joint_angle = [0.0, 0.0, 0.0, 0.0, 0.0]
-present_kinematics_pose = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-goal_kinematics_pose = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-prev_goal_kinematics_pose = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+# Key definitions
+KEY_1 = '1'
+KEY_2 = '2'
+KEY_3 = '3'
+KEY_4 = '4'
+KEY_Q = 'q'
+KEY_W = 'w'
+KEY_E = 'e'
+KEY_R = 'r'
+KEY_O = 'o'
+KEY_P = 'p'
+KEY_ESC = '\x1b'
 
-task_position_delta = 0.01  # meter
-joint_angle_delta = 0.05  # radian
-path_time = 0.5  # second
+ARM_JOINT_TOPIC = '/servo_node/delta_joint_cmds'
+GRIPPER_ACTION = 'gripper_controller/gripper_cmd'
+START_SERVO_SRV = '/servo_node/start_servo'
+STOP_SERVO_SRV = '/servo_node/stop_servo'
+BASE_FRAME_ID = 'link1'
+ARM_JOINT_VEL = 3.0  # rad/s
+PUBLISH_RATE_HZ = 100
 
-class MarvinOperation(Node):
-
-    qos = QoSProfile(depth=10)
-
+class KeyboardReader:
     def __init__(self):
-        super().__init__('operation')
+        self.fd = sys.stdin.fileno()
+        self.old_settings = termios.tcgetattr(self.fd)
+        tty.setcbreak(self.fd)
 
-        # Create joint_goals subscriber
-        self.joint_goal_subscription = self.create_subscription(
-            JointState,
-            'joint_goals',
-            self.joint_goal_callback,
-            self.qos)
-        self.joint_goal_subscription
+    def read_key(self):
+        return sys.stdin.read(1)
 
-        # Create joint_states subscriber
-        self.joint_state_subscription = self.create_subscription(
-            JointState,
-            'joint_states',
-            self.joint_state_callback,
-            self.qos)
-        self.joint_state_subscription
+    def shutdown(self):
+        termios.tcsetattr(self.fd, termios.TCSANOW, self.old_settings)
 
-        # Create kinematics_pose subscriber
-        self.kinematics_pose_subscription = self.create_subscription(
-            KinematicsPose,
-            'kinematics_pose',
-            self.kinematics_pose_callback,
-            self.qos)
-        self.kinematics_pose_subscription
 
-        # Create manipulator state subscriber
-        self.open_manipulator_state_subscription = self.create_subscription(
-            OpenManipulatorState,
-            'states',
-            self.open_manipulator_state_callback,
-            self.qos)
-        self.open_manipulator_state_subscription
+class TeleopNode(Node):
+    def __init__(self):
+        super().__init__('open_manipulator_x_teleop')
+        # Service clients
+        self.start_cli = self.create_client(Trigger, START_SERVO_SRV)
+        self.stop_cli  = self.create_client(Trigger, STOP_SERVO_SRV)
+        # Publisher
+        self.joint_pub = self.create_publisher(JointJog, ARM_JOINT_TOPIC, 10)
+        # Action client
+        self.gripper_ac = ActionClient(self, GripperCommand, GRIPPER_ACTION)
 
-        # Create Service Clients
-        self.goal_joint_space = self.create_client(SetJointPosition, 'goal_joint_space_path')
-        self.goal_task_space = self.create_client(SetKinematicsPose, 'goal_task_space_path')
-        self.tool_control = self.create_client(SetJointPosition, 'goal_tool_control')
-        self.goal_joint_space_req = SetJointPosition.Request()
-        self.goal_task_space_req = SetKinematicsPose.Request()
-        self.tool_control_req = SetJointPosition.Request()
+        # State
+        self.joint_msg = JointJog()
+        self.publish_joint = False
 
-    def send_goal_joint_space(self, path_time):
-        self.goal_joint_space_req.joint_position.joint_name = ['joint1', 'joint2', 'joint3', 'joint4', 'gripper']
-        self.goal_joint_space_req.joint_position.position = [goal_joint_angle[0], goal_joint_angle[1], goal_joint_angle[2], goal_joint_angle[3], goal_joint_angle[4]]
-        self.goal_joint_space_req.path_time = path_time
+        # Start background threads
+        threading.Thread(target=self._spin_loop, daemon=True).start()
+        threading.Thread(target=self._pub_loop, daemon=True).start()
+
+        # Wait for MoveIt Servo services
+        self._wait_for_service(self.start_cli, 'start_servo')
+        self._wait_for_service(self.stop_cli,  'stop_servo')
+        self._call_trigger(self.start_cli, 'start')
+
+    def _wait_for_service(self, client, name):
+        self.get_logger().info(f'Waiting for moveit_servo {name} service...')
+        if not client.wait_for_service(timeout_sec=10.0):
+            self.get_logger().error(f'Failed to connect to {name} service')
+        else:
+            self.get_logger().info(f'Connected to {name} service')
+
+    def _call_trigger(self, client, name):
+        req = Trigger.Request()
+        future = client.call_async(req)
+        rclpy.spin_until_future_complete(self, future, timeout_sec=2.0)
+        if future.done() and future.result().success:
+            self.get_logger().info(f'Successfully called {name} service')
+        else:
+            self.get_logger().warn(f'Could not call {name} service')
+
+    def _spin_loop(self):
+        while rclpy.ok():
+            rclpy.spin_once(self, timeout_sec=0.1)
+
+    def _pub_loop(self):
+        rate = self.create_rate(PUBLISH_RATE_HZ)
+        while rclpy.ok():
+            if self.publish_joint:
+                self.joint_msg.header.stamp = self.get_clock().now().to_msg()
+                self.joint_msg.header.frame_id = BASE_FRAME_ID
+                self.joint_pub.publish(self.joint_msg)
+                self.publish_joint = False
+                self.get_logger().info('Published JointJog')
+            rate.sleep()
+
+    def send_gripper_goal(self, position: float):
+        goal_msg = GripperCommand.Goal()
+        goal_msg.command.position = position
+        goal_msg.command.max_effort = 100.0
+        self.get_logger().info(f'Sending gripper goal: {position:.3f}')
+        self.gripper_ac.wait_for_server()
+        self.gripper_ac.send_goal_async(goal_msg)
+
+    def run(self):
+        kb = KeyboardReader()
+        self.get_logger().info('--- Open Manipulator X Teleop ---')
+        self.get_logger().info('1/q: Joint1 +/-   2/w: Joint2 +/-   3/e: Joint3 +/-   4/r: Joint4 +/-')
+        self.get_logger().info('o: open gripper   p: close gripper   ESC: quit')
 
         try:
-            self.goal_joint_space.call_async(self.goal_joint_space_req)
+            while rclpy.ok():
+                c = kb.read_key()
+                # reset
+                self.joint_msg = JointJog()
+                self.joint_msg.joint_names = []
+                self.joint_msg.velocities = []
+
+                if c == KEY_1:
+                    self.joint_msg.joint_names.append('joint1')
+                    self.joint_msg.velocities.append( ARM_JOINT_VEL)
+                    self.publish_joint = True
+                elif c == KEY_Q:
+                    self.joint_msg.joint_names.append('joint1')
+                    self.joint_msg.velocities.append(-ARM_JOINT_VEL)
+                    self.publish_joint = True
+
+                elif c == KEY_2:
+                    self.joint_msg.joint_names.append('joint2')
+                    self.joint_msg.velocities.append( ARM_JOINT_VEL)
+                    self.publish_joint = True
+                elif c == KEY_W:
+                    self.joint_msg.joint_names.append('joint2')
+                    self.joint_msg.velocities.append(-ARM_JOINT_VEL)
+                    self.publish_joint = True
+
+                elif c == KEY_3:
+                    self.joint_msg.joint_names.append('joint3')
+                    self.joint_msg.velocities.append( ARM_JOINT_VEL)
+                    self.publish_joint = True
+                elif c == KEY_E:
+                    self.joint_msg.joint_names.append('joint3')
+                    self.joint_msg.velocities.append(-ARM_JOINT_VEL)
+                    self.publish_joint = True
+
+                elif c == KEY_4:
+                    self.joint_msg.joint_names.append('joint4')
+                    self.joint_msg.velocities.append( ARM_JOINT_VEL)
+                    self.publish_joint = True
+                elif c == KEY_R:
+                    self.joint_msg.joint_names.append('joint4')
+                    self.joint_msg.velocities.append(-ARM_JOINT_VEL)
+                    self.publish_joint = True
+
+                elif c == KEY_O:
+                    self.send_gripper_goal(0.019)
+                elif c == KEY_P:
+                    self.send_gripper_goal(-0.01)
+
+                elif c == KEY_ESC:
+                    self.get_logger().info('ESC pressed: shutting down')
+                    break
+
+                else:
+                    self.get_logger().warn(f'Unknown key: 0x{ord(c):02X}')
+
         except Exception as e:
-            self.get_logger().info('Sending Goal Joint failed %r' % (e,))
+            self.get_logger().error(f'Exception: {e}')
+        finally:
+            kb.shutdown()
+            # stop servo
+            self._call_trigger(self.stop_cli, 'stop')
+            rclpy.shutdown()
 
-    def send_tool_control_request(self):
-        self.tool_control_req.joint_position.joint_name = ['joint1', 'joint2', 'joint3', 'joint4', 'gripper']
-        self.tool_control_req.joint_position.position = [goal_joint_angle[0], goal_joint_angle[1], goal_joint_angle[2], goal_joint_angle[3], goal_joint_angle[4]]
-        self.tool_control_req.path_time = path_time
 
-        try:
-            self.tool_control_result = self.tool_control.call_async(self.tool_control_req)
-
-        except Exception as e:
-            self.get_logger().info('Tool control failed %r' % (e,))
-
-    def kinematics_pose_callback(self, msg):
-        present_kinematics_pose[0] = msg.pose.position.x
-        present_kinematics_pose[1] = msg.pose.position.y
-        present_kinematics_pose[2] = msg.pose.position.z
-        present_kinematics_pose[3] = msg.pose.orientation.w
-        present_kinematics_pose[4] = msg.pose.orientation.x
-        present_kinematics_pose[5] = msg.pose.orientation.y
-        present_kinematics_pose[6] = msg.pose.orientation.z
-
-    def joint_state_callback(self, msg):
-        present_joint_angle[0] = msg.position[0]
-        present_joint_angle[1] = msg.position[1]
-        present_joint_angle[2] = msg.position[2]
-        present_joint_angle[3] = msg.position[3]
-        present_joint_angle[4] = msg.position[4]
-
-        present_effort[0] = msg.effort[0]
-        present_effort[1] = msg.effort[1]
-        present_effort[2] = msg.effort[2]
-        present_effort[3] = msg.effort[3]
-        present_effort[4] = msg.effort[4]
-
-    def joint_goal_callback(self, msg):
-        goal_joint_angle[0] = msg.position[0]
-        goal_joint_angle[1] = msg.position[1]
-        goal_joint_angle[2] = msg.position[2]
-        goal_joint_angle[3] = msg.position[3]
-        goal_joint_angle[4] = msg.position[4]
-
-    def open_manipulator_state_callback(self, msg):
-        if msg.open_manipulator_moving_state == 'STOPPED':
-            for index in range(0, 7):
-                goal_kinematics_pose[index] = present_kinematics_pose[index]
-            for index in range(0, 5):
-                goal_joint_angle[index] = present_joint_angle[index]
-
-def print_present_values():
-    print('Joint Angle(Rad): [{:.3f}, {:.3f}, {:.3f}, {:.3f}, {:.3f}]'.format(
-        present_joint_angle[0],
-        present_joint_angle[1],
-        present_joint_angle[2],
-        present_joint_angle[3],
-        present_joint_angle[4]))
-    print('Kinematics Pose(Pose X, Y, Z | Orientation W, X, Y, Z): {:.3f}, {:.3f}, {:.3f} | {:.3f}, {:.3f}, {:.3f}, {:.3f}'.format(
-        present_kinematics_pose[0],
-        present_kinematics_pose[1],
-        present_kinematics_pose[2],
-        present_kinematics_pose[3],
-        present_kinematics_pose[4],
-        present_kinematics_pose[5],
-        present_kinematics_pose[6]))
-    print('Present Effort: [{:.3f}, {:.3f}, {:.3f}, {:.3f}, {:.3f}]'.format(
-        present_effort[0],
-        present_effort[1],
-        present_effort[2],
-        present_effort[3],
-        present_effort[4]))
-
-def main():
-    try:
-        rclpy.init()
-    except Exception as e:
-        print(e)
-
-    try:
-        marvin_op = MarvinOperation()
-    except Exception as e:
-        print(e)
-
-    try:
-        while(rclpy.ok()):
-            rclpy.spin_once(marvin_op)
-            print_present_values()
-            marvin_op.send_goal_joint_space(path_time=5.0)
-
-    except Exception as e:
-        print(e)
-
-    finally:
-        marvin_op.destroy_node()
-        rclpy.shutdown()
+def main(args=None):
+    rclpy.init(args=args)
+    teleop = TeleopNode()
+    # Handle Ctrl-C at Python level
+    signal.signal(signal.SIGINT, lambda sig, frame: rclpy.shutdown())
+    teleop.run()
 
 
 if __name__ == '__main__':
