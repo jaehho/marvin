@@ -19,7 +19,7 @@ def generate_launch_description():
         Node(package=package_name, executable='poseDisplay', output='screen'),
 
         # Operation node
-        Node(package=package_name, executable='operation', output='screen'),
+        #Node(package=package_name, executable='operation', output='screen'),
         
         # Joint velocity publisher node
         Node(package=package_name, executable='jointVelocityPublisher', output='screen'),
