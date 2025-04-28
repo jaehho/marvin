@@ -15,7 +15,7 @@ class JointErrorToVelocityPublisher(Node):
         self.joint_goal = None
         self.joint_actual = None
         self.gain = 10.0  # Velocity input gain multiplier, need to be tuned
-        self.velocity_limit = 2  # Joint velocity limit, need to be tuned
+        self.velocity_limit = 4.8  # Joint velocity limit, need to be tuned
 
         # Subscriptions
         self.subscription_goal = self.create_subscription(
@@ -35,7 +35,7 @@ class JointErrorToVelocityPublisher(Node):
         # Publisher to MoveIt Servo's expected input
         self.joint_velocity_publisher = self.create_publisher(
             JointJog,
-            'joint_velocity_commands',
+            'intermediate_joint_cmds',
             10
         )
 
