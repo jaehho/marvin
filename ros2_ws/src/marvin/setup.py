@@ -33,6 +33,7 @@ setup(
             'shoulderFlexion = marvin.shoulderFlexion:main',
             'elbowFlexion = marvin.elbowFlexion:main',
             'jointGoalPublisher = marvin.jointGoalPublisher:main',
+            'jointVelocityPublisher = marvin.jointVelocityPublisher:main',
             'displayJointStates = marvin.displayJointStates:main',
             'operation = marvin.operation:main',
         ],

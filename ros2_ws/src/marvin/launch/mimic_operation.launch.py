@@ -20,6 +20,9 @@ def generate_launch_description():
 
         # Operation node
         Node(package=package_name, executable='operation', output='screen'),
+        
+        # Joint velocity publisher node
+        Node(package=package_name, executable='jointVelocityPublisher', output='screen'),
 
         # Joint state publisher node
         Node(package=package_name, executable='jointGoalPublisher', output='screen'),
