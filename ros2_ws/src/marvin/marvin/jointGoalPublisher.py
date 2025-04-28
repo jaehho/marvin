@@ -48,7 +48,7 @@ class JointGoalPublisher(Node):
             #     f'{side}_joint4', f'{side}_gripper'
             # ])
             robot_joint_names.extend([
-                'joint1', 'joint2', 'joint3', 'joint4', 'gripper'
+                'joint1', 'joint2', 'joint3', 'joint4', 'gripper_left_joint', 'gripper_right_joint'
             ])
             
             if side == 'left':

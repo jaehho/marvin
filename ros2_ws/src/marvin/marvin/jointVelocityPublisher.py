@@ -1,3 +1,4 @@
+import numpy as np
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import JointState
@@ -14,6 +15,7 @@ class JointErrorToVelocityPublisher(Node):
         self.joint_goal = None
         self.joint_actual = None
         self.gain = 10.0  # Velocity input gain multiplier, need to be tuned
+        self.velocity_limit = 2  # Joint velocity limit, need to be tuned
 
         # Subscriptions
         self.subscription_goal = self.create_subscription(
@@ -58,7 +60,7 @@ class JointErrorToVelocityPublisher(Node):
         for joint_name in goal_dict:
             if joint_name in actual_dict:
                 error = goal_dict[joint_name] - actual_dict[joint_name]
-                velocity = self.gain * error
+                velocity = np.clip(self.gain * error, -self.velocity_limit, self.velocity_limit)
                 joint_errors[joint_name] = error
                 joint_velocities[joint_name] = velocity
             else:
