@@ -1,4 +1,5 @@
-# signaling_server.py
+# uvicorn signaling_server:app --host 0.0.0.0 --port 9000
+
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 import json
 
