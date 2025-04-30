@@ -1,82 +1,94 @@
-<template>
-    <div>
-      <h1>ROS Web Interface</h1>
-      <p>Check the console for messages.</p>
-      <button @click="publishMessage">Publish Message</button>
-    </div>
-  </template>
-  
-  <script setup>
-  import { onMounted } from "vue";
-  
-  // Declare talker in a scope accessible to the publish function.
-  let talker = null;
-  
-  function publishMessage() {
-    if (!talker) {
-      console.error("Talker is not ready yet.");
-      return;
-    }
-    
-    // Create a new message and publish it when the button is clicked.
-    const message = new ROSLIB.Message({
-      data: "Hello from the button!"
-    });
-    talker.publish(message);
-    console.log("Published message: Hello from the button!");
+<script setup>
+import { ref, onMounted, onBeforeUnmount } from 'vue';
+
+const SIGNAL_URL = 'ws://24.193.235.114:9000/ws';
+const localId = crypto.randomUUID();
+const hubId = 'hub';
+let pc, dc, ws;
+const input = ref('');
+const messages = ref([]);
+
+function log(msg) {
+  console.log(`[${localId}] ${msg}`);
+}
+
+function sendMessage() {
+  if (dc && dc.readyState === 'open' && input.value.trim()) {
+    dc.send(input.value);
+    messages.value.push(`[me] ${input.value}`);
+    input.value = '';
   }
-  
-  onMounted(() => {
-    // Load roslibjs dynamically to prevent SSR issues.
-    const script = document.createElement("script");
-    script.src = "https://cdn.jsdelivr.net/npm/roslib@1/build/roslib.min.js";
-    script.onload = () => {
-      initializeROS();
-    };
-    document.head.appendChild(script);
-  
-    function initializeROS() {
-      if (typeof ROSLIB === "undefined") {
-        console.error("ROSLIB not loaded");
-        return;
-      }
-  
-      // Establish a connection to the ROS bridge.
-      const ros = new ROSLIB.Ros({
-        url: "ws://localhost:9090" // Change this to your rosbridge server address.
-      });
-  
-      // Connection event handlers.
-      ros.on("connection", () => {
-        console.log("Connected to rosbridge server.");
-      });
-  
-      ros.on("error", (error) => {
-        console.error("Error connecting to rosbridge server:", error);
-      });
-  
-      ros.on("close", () => {
-        console.log("Connection to rosbridge server closed.");
-      });
-  
-      // Example: Subscribe to a topic.
-      const listener = new ROSLIB.Topic({
-        ros: ros,
-        name: "/chatter", // Change to your topic name.
-        messageType: "std_msgs/String",
-      });
-  
-      listener.subscribe((message) => {
-        console.log("Received message on " + listener.name + ": " + message.data);
-      });
-  
-      // Example: Create a publisher (talker) to a topic.
-      talker = new ROSLIB.Topic({
-        ros: ros,
-        name: "/chatter",
-        messageType: "std_msgs/String",
-      });
-    }
+}
+
+onMounted(async () => {
+  pc = new RTCPeerConnection({
+    iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
   });
-  </script>
-  
+
+  ws = new WebSocket(SIGNAL_URL);
+
+  ws.onopen = async () => {
+    log('Connected to signaling server');
+    ws.send(JSON.stringify({ type: 'register', id: localId }));
+
+    dc = pc.createDataChannel('chat');
+    dc.onopen = () => log('DataChannel opened');
+    dc.onmessage = e => {
+      messages.value.push(e.data);
+      log(`Received: ${e.data}`);
+    };
+
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+
+    ws.send(JSON.stringify({
+      type: 'offer',
+      sdp: offer.sdp,
+      from: localId,
+      to: hubId
+    }));
+    log('Sent offer to hub');
+  };
+
+  ws.onmessage = async (event) => {
+    const data = JSON.parse(event.data);
+    if (data.type === 'answer') {
+      await pc.setRemoteDescription(data);
+      log('Received answer');
+    } else if (data.type === 'candidate') {
+      await pc.addIceCandidate(data.candidate);
+      log('Added ICE candidate');
+    }
+  };
+
+  pc.onicecandidate = ({ candidate }) => {
+    if (candidate && ws.readyState === 1) {
+      ws.send(JSON.stringify({
+        type: 'candidate',
+        candidate,
+        from: localId,
+        to: hubId
+      }));
+      log('Sent ICE candidate');
+    }
+  };
+
+  pc.onconnectionstatechange = () => {
+    log(`Connection state: ${pc.connectionState}`);
+  };
+});
+
+onBeforeUnmount(() => {
+  ws?.close();
+  pc?.close();
+});
+</script>
+
+<template>
+  <div>
+    <h2>Spoke {{ localId }}</h2>
+    <div v-for="(msg, idx) in messages" :key="idx">{{ msg }}</div>
+    <input v-model="input" @keyup.enter="sendMessage" placeholder="Type a message..." />
+    <button @click="sendMessage">Send</button>
+  </div>
+</template>
