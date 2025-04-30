@@ -1,17 +1,23 @@
-<script></script>
+<script>
+export default {
+  data() {
+    return {
+      pages: [
+        { name: 'Home', path: '/' },
+        { name: 'Pose', path: '/simple_pose' },
+        { name: 'Test', path: '/test' },
+      ]
+    }
+  }
+}
+</script>
 
 <template>
   <header>
     <nav>
       <ul>
-        <li>
-          <NuxtLink to="/">Home</NuxtLink>
-        </li>
-        <li>
-          <NuxtLink to="/control">Control</NuxtLink>
-        </li>
-        <li>
-          <NuxtLink to="/test">Test</NuxtLink>
+        <li v-for="page in pages" :key="page.path">
+          <NuxtLink :to="page.path">{{ page.name }}</NuxtLink>
         </li>
       </ul>
     </nav>
