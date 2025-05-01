@@ -100,27 +100,6 @@ async def websocket_endpoint(ws: WebSocket):
                         "message": "You don't have control to give up."
                     }))
 
-            # elif msg["type"] == "join_queue":
-            #     if client_id not in queue and current_control != client_id:
-            #         queue.append(client_id)
-            #         print(f"[DEBUG] {client_id} joined the queue. Queue length: {len(queue)}")
-            #         # Send the updated ordered queue to all clients
-            #         for client in clients.values():
-            #             await client.send_text(json.dumps({
-            #                 "type": "queue_update",
-            #                 "queue": queue,  # Send the updated ordered queue
-            #             }))
-            #         await ws.send_text(json.dumps({
-            #             "type": "queue_status",
-            #             "queue": queue,  # Send the updated ordered queue to the client
-            #         }))
-            #     else:
-            #         await ws.send_text(json.dumps({
-            #             "type": "error",
-            #             "message": "You cannot join the queue if you already have control or are in the queue."
-            #         }))
-            #         print(f"[DEBUG] {client_id} could not join the queue.")
-            # When sending a queue update message, include the position of the client
             elif msg["type"] == "join_queue":
                 if client_id not in queue and current_control != client_id:
                     queue.append(client_id)
@@ -147,23 +126,27 @@ async def websocket_endpoint(ws: WebSocket):
                         "message": "You cannot join the queue if you already have control or are in the queue."
                     }))
                     print(f"[DEBUG] {client_id} could not join the queue.")
-
+                    
             elif msg["type"] == "leave_queue":
                 if client_id in queue:
                     queue.remove(client_id)
                     print(f"[DEBUG] {client_id} left the queue. Queue length: {len(queue)}")
+                    
+                    # Recalculate positions after removal
                     for client in clients.values():
+                        queue_with_positions = [
+                            {"client_id": client_id, "queue_position": idx + 1}
+                            for idx, client_id in enumerate(queue)
+                        ]
                         await client.send_text(json.dumps({
                             "type": "queue_update",
-                            "queue": queue,  # Send the updated ordered queue
+                            "queue": queue_with_positions,  # Send the updated ordered queue with positions
                         }))
+                    
                     await ws.send_text(json.dumps({
                         "type": "queue_status",
                         "queue": queue,  # Send the updated ordered queue to the client
                     }))
-            else:
-                if target in clients:
-                    await clients[target].send_text(raw)
 
     except WebSocketDisconnect:
         print(f"[DEBUG] {client_id} disconnected.")
