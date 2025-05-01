@@ -35,7 +35,7 @@ function handleButtonClick() {
     ws.send(JSON.stringify({ type: 'claim_control', from: localId }));
     log('Attempting to claim control');
   } else if (control.value !== localId && !queue.value.includes(localId)) {
-    // Someone has control and client is not in the queue: Join the Queue
+    // Someone else has control and client is not in the queue: Join the Queue
     ws.send(JSON.stringify({ type: 'join_queue', from: localId }));
     log('Attempting to join the queue');
   } else if (control.value === localId) {
@@ -50,26 +50,27 @@ function handleButtonClick() {
 }
 
 const controlStatus = computed(() => {
+  log(`Control: ${control.value}, Queue: ${queue.value}`);
   if (control.value === localId) {
     return 'You are in control';
   } else if (queue.value.includes(localId)) {
     return `You are in position ${queue.value.indexOf(localId) + 1} in the queue.`;
   } else if (control.value === null) {
-    return 'Take control';
+    return 'You can take control';
   } else {
-    return 'Join queue';
+    return 'You can join queue';
   }
 });
 
 const dynamicButtonText = computed(() => {
   if (control.value === null && !queue.value.includes(localId)) {
     return 'Take Control'; // If neither control nor in queue, offer to take control
-  } else if (control.value !== null && queue.value.includes(localId)) {
-    return 'Leave Queue'; // If client is in queue, show "Leave Queue"
   } else if (control.value === localId) {
     return 'Give Up Control'; // If client has control, show "Give Up Control"
+  } else if (queue.value.includes(localId)) {
+    return 'Leave Queue'; // If client is in the queue, show "Leave Queue"
   } else {
-    return 'Join Queue'; // Default if control is not held
+    return 'Join Queue'; // Default if control is not held and not in queue
   }
 });
 
@@ -120,14 +121,15 @@ onMounted(async () => {
       // Process the updated queue and log the position correctly
       queue.value = data.queue.map(client => client.client_id);  // Update queue with only client_ids
       data.queue.forEach(client => {
-        if (client.client_id === localId) {
-          log(`Queue updated: You are in position ${client.queue_position}`);
-        }
-      });
+          if (client.client_id === localId) {
+              log(`Queue updated: You are in position ${client.queue_position}`);
+          }});
     } else if (data.type === 'busy') {
       messages.value.push(data.message);  // Show the busy message to the user
+      log('System is busy: ' + data.message);
     } else if (data.type === 'error') {
       messages.value.push(data.message);  // Show error messages to the user
+      log('Error: ' + data.message);
     }
   };
 
