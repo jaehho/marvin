@@ -31,7 +31,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, onMounted, onBeforeUnmount } from "vue";
 import {
   PoseLandmarker,
   FilesetResolver,
@@ -47,6 +47,7 @@ interface Landmark {
 // Reactive State & Refs
 const poseDetector = ref<any>(null);
 const isDetectionLoopRunning = ref(false);
+const animationFrameId = ref<number | null>(null); // For tracking animation frame
 
 // Template element refs
 const webcam = ref<HTMLVideoElement | null>(null);
@@ -251,7 +252,7 @@ async function startPoseDetectionLoop() {
         console.error("Pose detection error:", error);
       }
     }
-    requestAnimationFrame(loop);
+    animationFrameId.value = requestAnimationFrame(loop);
   }
   loop();
 }
@@ -259,7 +260,6 @@ async function startPoseDetectionLoop() {
 // Lifecycle Hook
 onMounted(async () => {
   poseDetector.value = await initializePoseDetection("VIDEO", 1);
-
   initializeLocalStream();
 });
 
@@ -276,6 +276,27 @@ async function initializeLocalStream() {
     console.error("Media device error:", error);
   }
 }
+
+// Cleanup on page unload or refresh
+onBeforeUnmount(() => {
+  // Stop webcam stream
+  const stream = webcam.value?.srcObject as MediaStream;
+  stream?.getTracks().forEach((track) => track.stop());
+
+  // Cancel animation frame loop
+  if (animationFrameId.value !== null) {
+    cancelAnimationFrame(animationFrameId.value);
+  }
+
+  // Clear canvases
+  clearCanvas(webcam_overlay_canvas.value);
+  clearCanvas(world_canvas_xz.value);
+  clearCanvas(world_canvas_yz.value);
+  clearCanvas(world_canvas_xy.value);
+
+  // Dispose of poseLandmarker if method exists
+  poseDetector.value?.poseLandmarker?.close?.();
+});
 </script>
 
 <style scoped>
