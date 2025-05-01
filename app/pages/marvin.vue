@@ -1,298 +1,454 @@
 <template>
-    <div>
-      <h2>Spoke {{ localId }} – Pose Client</h2>
-  
-      <!-- control / queue UI -->
-      <div>
-        <button @click="handleButtonClick">
-          {{ dynamicButtonText }}
-        </button>
-        <span style="margin-left: 1em">{{ controlStatus }}</span>
-      </div>
-  
-      <!-- pose detection UI -->
-      <div class="simple_pose_container">
-        <h3>Webcam + Pose Overlay</h3>
-        <div class="video_wrapper">
-          <video ref="webcam" autoplay playsinline></video>
-          <canvas ref="webcam_overlay_canvas" class="webcam_overlay_canvas"></canvas>
-        </div>
-  
-        <div class="world_landmarks">
-          <h4>World XZ</h4>
-          <canvas ref="world_canvas_xz" class="world_canvas"></canvas>
-        </div>
-        <div class="world_landmarks">
-          <h4>World YZ</h4>
-          <canvas ref="world_canvas_yz" class="world_canvas"></canvas>
-        </div>
-        <div class="world_landmarks">
-          <h4>World XY</h4>
-          <canvas ref="world_canvas_xy" class="world_canvas"></canvas>
+  <div class="container">
+    <!-- Control / Chat Panel -->
+    <section class="chat-panel">
+      <h2>Spoke {{ localId }}</h2>
+      <div class="messages">
+        <div v-for="(msg, idx) in messages" :key="idx" class="message">
+          {{ msg }}
         </div>
       </div>
-    </div>
-  </template>
-  
-  <script setup lang="ts">
-  import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
-  import { PoseLandmarker, FilesetResolver, DrawingUtils } from '@mediapipe/tasks-vision'
-  
-  /** —————————————————————————
-   *  Signaling / WebRTC setup
-   *  ————————————————————————— */
-  const SIGNAL_URL = 'ws://24.193.235.114:9000/ws'
-  const localId = crypto.randomUUID()
-  const hubId = 'hub'
-  
-  let pc: RTCPeerConnection
-  let dc: RTCDataChannel
-  let ws: WebSocket
-  
-  const control = ref<string|null>(null)
-  const queue = ref<string[]>([])
-  
-  function log(msg: string) {
-    console.log(`[DEBUG][${localId}] ${msg}`)
-  }
-  
-  const clientMode = computed(() => {
-    if (control.value === localId) return 'in_control'
-    if (queue.value.includes(localId)) return 'in_queue'
-    if (control.value === null) return 'idle'
-    return 'others_control'
-  })
-  
-  const modeConfig = {
-    idle:  { buttonText: 'Take Control',    statusText: 'You can take control',  actionType: 'claim_control' },
-    others_control: { buttonText: 'Join Queue', statusText: 'You can join queue',    actionType: 'join_queue' },
-    in_control:     { buttonText: 'Give Up Control', statusText: 'You are in control', actionType: 'give_up_control' },
-    in_queue:       { buttonText: 'Leave Queue', statusText: () => `You are #${queue.value.indexOf(localId)+1} in queue`, actionType: 'leave_queue' }
-  }
-  
-  const dynamicButtonText = computed(() => modeConfig[clientMode.value].buttonText)
-  const controlStatus     = computed(() => {
-    const t = modeConfig[clientMode.value].statusText
-    return typeof t === 'function' ? t() : t
-  })
-  
-  function handleButtonClick() {
-    const { actionType } = modeConfig[clientMode.value]
-    ws.send(JSON.stringify({ type: actionType, from: localId }))
-    log(`Sent ${actionType}`)
-  }
-  
-  function handleUnload() {
-    if (ws?.readyState === WebSocket.OPEN) {
-      const { actionType } = modeConfig[clientMode.value]
-      if (actionType === 'give_up_control' || actionType === 'leave_queue') {
-        ws.send(JSON.stringify({ type: actionType, from: localId }))
-      }
+      <div class="controls">
+        <button @click="handleButtonClick">{{ dynamicButtonText }}</button>
+        <p>{{ controlStatus }}</p>
+      </div>
+    </section>
+
+    <!-- Pose Detection Panel -->
+    <section class="pose-panel">
+      <h2>Pose Landmark Detection</h2>
+      <div class="grid-container">
+        <div class="webcam">
+          <h3>Webcam</h3>
+          <div class="video-wrapper">
+            <video ref="webcam" autoplay playsinline></video>
+            <canvas ref="webcamOverlay" class="overlay"></canvas>
+          </div>
+        </div>
+        <div class="world">
+          <h3>World XZ</h3>
+          <canvas ref="canvasXZ" class="world-canvas"></canvas>
+        </div>
+        <div class="world">
+          <h3>World YZ</h3>
+          <canvas ref="canvasYZ" class="world-canvas"></canvas>
+        </div>
+        <div class="world">
+          <h3>World XY</h3>
+          <canvas ref="canvasXY" class="world-canvas"></canvas>
+        </div>
+      </div>
+    </section>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, computed, onMounted, onBeforeUnmount } from "vue";
+import {
+  PoseLandmarker,
+  FilesetResolver,
+  DrawingUtils,
+} from "@mediapipe/tasks-vision";
+
+// --- Signaling / WebRTC Chat Setup ---
+const SIGNAL_URL = "ws://24.193.235.114:9000/ws";
+const hubId = "hub";
+const localId = crypto.randomUUID();
+let pc: RTCPeerConnection;
+let dc: RTCDataChannel;
+let ws: WebSocket;
+
+const messages = ref<string[]>([]);
+const status = ref<"available" | "busy">("available");
+const control = ref<string | null>(null);
+const queue = ref<string[]>([]);
+
+function log(msg: string) {
+  console.log(`[DEBUG][${localId}] ${msg}`);
+}
+
+const clientMode = computed(() => {
+  if (control.value === localId) return "in_control";
+  if (queue.value.includes(localId)) return "in_queue";
+  if (!control.value) return "idle";
+  return "others_control";
+});
+
+const modeConfig = {
+  idle: {
+    buttonText: "Take Control",
+    statusText: "You can take control",
+    actionType: "claim_control",
+  },
+  others_control: {
+    buttonText: "Join Queue",
+    statusText: "You can join queue",
+    actionType: "join_queue",
+  },
+  in_control: {
+    buttonText: "Give Up Control",
+    statusText: "You are in control",
+    actionType: "give_up_control",
+  },
+  in_queue: {
+    buttonText: "Leave Queue",
+    statusText: () => `You are #${queue.value.indexOf(localId) + 1} in queue`,
+    actionType: "leave_queue",
+  },
+};
+
+const dynamicButtonText = computed(
+  () => modeConfig[clientMode.value].buttonText
+);
+const controlStatus = computed(() => {
+  const t = modeConfig[clientMode.value].statusText;
+  return typeof t === "function" ? t() : t;
+});
+
+function handleButtonClick() {
+  ws.send(
+    JSON.stringify({
+      type: modeConfig[clientMode.value].actionType,
+      from: localId,
+    })
+  );
+  log(`Sent ${modeConfig[clientMode.value].actionType}`);
+}
+
+function handleUnload() {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    const mode = clientMode.value;
+    if (mode === "in_control" || mode === "in_queue") {
+      ws.send(
+        JSON.stringify({ type: modeConfig[mode].actionType, from: localId })
+      );
     }
   }
-  
-  onMounted(async () => {
-    window.addEventListener('beforeunload', handleUnload)
-  
-    // 1. create RTCPeerConnection + DataChannel
-    pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] })
-  
-    // 2. connect to signaling server
-    ws = new WebSocket(SIGNAL_URL)
-    ws.onopen = async () => {
-      log('WS open – registering')
-      ws.send(JSON.stringify({ type: 'register', id: localId }))
-  
-      // create our outbound data channel
-      dc = pc.createDataChannel('pose')
-      dc.onopen    = () => log('DataChannel opened')
-      dc.onmessage = e => log(`→ hub replied: ${e.data}`)
-  
-      // offer/answer handshake
-      const offer = await pc.createOffer()
-      await pc.setLocalDescription(offer)
-      ws.send(JSON.stringify({
-        type: 'offer', sdp: offer.sdp, from: localId, to: hubId
-      }))
-      log('Sent offer')
-    }
-  
-    ws.onmessage = async evt => {
-      const msg = JSON.parse(evt.data)
-      switch (msg.type) {
-        case 'answer':
-          await pc.setRemoteDescription(msg)
-          log('Got answer')
-          break
-        case 'candidate':
-          await pc.addIceCandidate(msg.candidate)
-          log('Added ICE candidate')
-          break
-        case 'status':
-          control.value = msg.control
-          queue.value   = msg.queue
-          break
-        case 'queue_update':
-          queue.value = msg.queue.map((c: any) => c.client_id)
-          break
-        case 'error':
-        case 'busy':
-          console.warn(msg.message)
-          break
-      }
-    }
-  
-    pc.onicecandidate = e => {
-      if (e.candidate && ws.readyState === 1) {
-        ws.send(JSON.stringify({
-          type: 'candidate',
-          candidate: e.candidate,
-          from: localId, to: hubId
-        }))
-      }
-    }
-  
-    pc.onconnectionstatechange = () => {
-      log(`PeerConnection state: ${pc.connectionState}`)
-    }
-  
-    /** —————————————————————————
-     *  Pose detection setup
-     *  ————————————————————————— */
-    const webcam = ref<HTMLVideoElement|null>(null)
-    const overlay = ref<HTMLCanvasElement|null>(null)
-    const worldXZ = ref<HTMLCanvasElement|null>(null)
-    const worldYZ = ref<HTMLCanvasElement|null>(null)
-    const worldXY = ref<HTMLCanvasElement|null>(null)
-  
-    // key landmarks we’ll send
-    const keyIndices = new Set([11,12,13,14,15,16,23,24])
-  
-    // init MediaPipe
-    const poseDetector = ref<any>(null)
-    async function initPose() {
-      const vision = await FilesetResolver.forVisionTasks(
-        'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm'
-      )
-      poseDetector.value = await PoseLandmarker.createFromOptions(vision, {
-        baseOptions: {
-          modelAssetPath:
-            'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_heavy/float16/latest/pose_landmarker_heavy.task',
-          delegate: 'GPU'
-        },
-        runningMode: 'VIDEO',
-        numPoses: 1
+}
+
+onMounted(async () => {
+  window.addEventListener("beforeunload", handleUnload);
+
+  // WebRTC PeerConnection
+  pc = new RTCPeerConnection({
+    iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+  });
+
+  // Signaling WebSocket
+  ws = new WebSocket(SIGNAL_URL);
+  ws.onopen = async () => {
+    log("Connected to signaling server");
+    ws.send(JSON.stringify({ type: "register", id: localId }));
+    // Create data channel
+    dc = pc.createDataChannel("chat");
+    dc.onopen = () => log("Data channel open");
+    dc.onmessage = (e) => {
+      messages.value.push(`[peer] ${e.data}`);
+      log(`Received message: ${e.data}`);
+    };
+    // Offer/Answer handshake
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    ws.send(
+      JSON.stringify({
+        type: "offer",
+        sdp: offer.sdp,
+        from: localId,
+        to: hubId,
       })
+    );
+    log("Sent offer");
+  };
+
+  ws.onmessage = async ({ data }) => {
+    const msg = JSON.parse(data);
+    switch (msg.type) {
+      case "answer":
+        await pc.setRemoteDescription(msg);
+        log("Received answer");
+        break;
+      case "candidate":
+        await pc.addIceCandidate(msg.candidate);
+        log("Added ICE candidate");
+        break;
+      case "status":
+        status.value = msg.status;
+        control.value = msg.control;
+        queue.value = msg.queue;
+        log(`Status update: control=${control.value} queue=[${queue.value}]`);
+        break;
+      case "queue_update":
+        queue.value = msg.queue.map((c: any) => c.client_id);
+        break;
+      case "error":
+      case "busy":
+        messages.value.push(`[System] ${msg.message}`);
+        break;
     }
-  
-    function setCanvasSize(c: HTMLCanvasElement, v: HTMLVideoElement) {
-      c.width  = v.videoWidth
-      c.height = v.videoHeight
-    }
-  
-    function drawWorld(worldLandmarks: any[], canvas: HTMLCanvasElement, plane: 'xz'|'yz'|'xy') {
-      const ctx = canvas.getContext('2d')!
-      const w = canvas.width, h = canvas.height
-      ctx.clearRect(0,0,w,h)
-      worldLandmarks.forEach(lms => {
-        // draw key points
-        keyIndices.forEach(i => {
-          if (!lms[i]) return
-          let x=0,y=0
-          if (plane==='xz') { x = (lms[i].x * w) + w/2; y = (lms[i].z * h) + h/2 }
-          if (plane==='yz') { x = (lms[i].z * w) + w/2; y = (lms[i].y * h) + h/2 }
-          if (plane==='xy') { x = (lms[i].x * w) + w/2; y = (lms[i].y * h) + h/2 }
-          ctx.fillStyle = 'red'
-          ctx.beginPath()
-          ctx.arc(x,y,5,0,2*Math.PI)
-          ctx.fill()
+  };
+
+  pc.onicecandidate = ({ candidate }) => {
+    if (candidate && ws.readyState === 1) {
+      ws.send(
+        JSON.stringify({
+          type: "candidate",
+          candidate,
+          from: localId,
+          to: hubId,
         })
-      })
+      );
+      log("Sent ICE candidate");
     }
-  
-    async function startDetection() {
-      const video = webcam.value!
-      const camCanvas = overlay.value!
-      const ortho = [worldXZ.value!, worldYZ.value!, worldXY.value!]
-  
-      async function frameLoop(now: number) {
-        if (video.readyState >= video.HAVE_ENOUGH_DATA && poseDetector.value) {
-          // draw overlay
-          setCanvasSize(camCanvas, video)
-          const result = await poseDetector.value.detectForVideo(video, now)
-          const dutils = new DrawingUtils(camCanvas.getContext('2d')!)
-          result.landmarks.forEach((lm:any) => {
-            dutils.drawConnectors(lm, PoseLandmarker.POSE_CONNECTIONS)
-            dutils.drawLandmarks(lm)
-          })
-  
-          // world views
-          ortho.forEach((cnv,i) => {
-            setCanvasSize(cnv, video)
-          })
-          drawWorld(result.worldLandmarks, ortho[0], 'xz')
-          drawWorld(result.worldLandmarks, ortho[1], 'yz')
-          drawWorld(result.worldLandmarks, ortho[2], 'xy')
-  
-          // if we have control & data-channel open → send key landmarks
-          if (clientMode.value === 'in_control' && dc.readyState === 'open') {
-            const wlm = result.worldLandmarks[0]||[]
-            const payload: Record<number, {x:number,y:number,z:number}> = {}
-            wlm.forEach((pt:any,i:number) => {
-              if (keyIndices.has(i)) {
-                payload[i] = { x:pt.x, y:pt.y, z:pt.z }
-              }
-            })
-            dc.send(JSON.stringify({ type:'landmarks', from: localId, data: payload }))
-            log(`Sent ${Object.keys(payload).length} key landmarks`)
-          }
-        }
-        requestAnimationFrame(frameLoop)
+  };
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener("beforeunload", handleUnload);
+  ws?.close();
+  pc?.close();
+});
+
+// --- Pose Detection Setup ---
+interface Landmark {
+  x: number;
+  y: number;
+  z: number;
+}
+const keyLandmarkIndices = new Set([11, 12, 13, 14, 15, 16, 23, 24]);
+
+// Refs for templates
+const webcam = ref<HTMLVideoElement | null>(null);
+const webcamOverlay = ref<HTMLCanvasElement | null>(null);
+const canvasXZ = ref<HTMLCanvasElement | null>(null);
+const canvasYZ = ref<HTMLCanvasElement | null>(null);
+const canvasXY = ref<HTMLCanvasElement | null>(null);
+
+let poseLandmarker: PoseLandmarker, detectForVideo: any;
+let animationId: number | null = null;
+
+async function initPose() {
+  const vision = await FilesetResolver.forVisionTasks(
+    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm"
+  );
+  poseLandmarker = await PoseLandmarker.createFromOptions(vision, {
+    baseOptions: {
+      modelAssetPath:
+        "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_heavy/float16/latest/pose_landmarker_heavy.task",
+      delegate: "GPU",
+    },
+    runningMode: "VIDEO",
+    numPoses: 1,
+  });
+  detectForVideo = poseLandmarker.detectForVideo.bind(poseLandmarker);
+}
+
+function resizeCanvas(canvas: HTMLCanvasElement, video: HTMLVideoElement) {
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+}
+
+function orthographic(
+  landmark: Landmark,
+  plane: "xy" | "xz" | "yz",
+  w: number,
+  h: number
+) {
+  const cx = w / 2,
+    cy = h / 2;
+  let px = 0,
+    py = 0,
+    shiftY = 0;
+  if (plane === "xy") {
+    px = landmark.x;
+    py = landmark.y;
+    shiftY = 150;
+  }
+  if (plane === "xz") {
+    px = landmark.x;
+    py = landmark.z;
+    shiftY = 75;
+  }
+  if (plane === "yz") {
+    px = landmark.z;
+    py = landmark.y;
+    shiftY = 150;
+  }
+  return { x: px * w + cx, y: py * h + cy + shiftY };
+}
+
+function drawWorld(
+  worldLandmarks: Landmark[][],
+  canvas: HTMLCanvasElement,
+  plane: "xy" | "xz" | "yz"
+) {
+  const ctx = canvas.getContext("2d")!;
+  const v = webcam.value!;
+  resizeCanvas(canvas, v);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  worldLandmarks.forEach((landmarks) => {
+    // points
+    ctx.fillStyle = "red";
+    keyLandmarkIndices.forEach((i) => {
+      if (landmarks[i]) {
+        const p = orthographic(
+          landmarks[i],
+          plane,
+          canvas.width,
+          canvas.height
+        );
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
+        ctx.fill();
       }
-      frameLoop(performance.now())
+    });
+    // connections
+    ctx.strokeStyle = "blue";
+    ctx.lineWidth = 3;
+    PoseLandmarker.POSE_CONNECTIONS.forEach(({ start, end }) => {
+      if (
+        keyLandmarkIndices.has(start) &&
+        keyLandmarkIndices.has(end) &&
+        landmarks[start] &&
+        landmarks[end]
+      ) {
+        const p1 = orthographic(
+          landmarks[start],
+          plane,
+          canvas.width,
+          canvas.height
+        );
+        const p2 = orthographic(
+          landmarks[end],
+          plane,
+          canvas.width,
+          canvas.height
+        );
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.stroke();
+      }
+    });
+  });
+}
+
+async function startLoop() {
+  if (!webcam.value) return;
+  const video = webcam.value;
+  const overlay = webcamOverlay.value!;
+  const orthoCanvases = [canvasXZ.value!, canvasYZ.value!, canvasXY.value!];
+
+  async function loop() {
+    if (video.readyState >= video.HAVE_ENOUGH_DATA) {
+      const res = await detectForVideo(video, performance.now());
+      // draw overlay
+      {
+        const ctx = overlay.getContext("2d")!;
+        resizeCanvas(overlay, video);
+        ctx.clearRect(0, 0, overlay.width, overlay.height);
+        const du = new DrawingUtils(ctx);
+        res.landmarks.forEach((l: any) => {
+          du.drawLandmarks(l, {
+            radius: (d) => DrawingUtils.lerp(d.from?.z || 0, -0.15, 0.1, 5, 1),
+          });
+          du.drawConnectors(l, PoseLandmarker.POSE_CONNECTIONS);
+        });
+      }
+      // draw orthographic
+      drawWorld(res.worldLandmarks, orthoCanvases[0], "xz");
+      drawWorld(res.worldLandmarks, orthoCanvases[1], "yz");
+      drawWorld(res.worldLandmarks, orthoCanvases[2], "xy");
+      // send key landmarks if in control
+      if (clientMode.value === "in_control" && dc.readyState === "open") {
+        const keyData = res.worldLandmarks.map((landmarks) =>
+          [...keyLandmarkIndices].map((i) => ({
+            index: i,
+            x: landmarks[i]?.x ?? null,
+            y: landmarks[i]?.y ?? null,
+            z: landmarks[i]?.z ?? null,
+          }))
+        );
+        dc.send(
+          JSON.stringify({ type: "landmarks", from: localId, data: keyData })
+        );
+        messages.value.push(`[me] sent ${keyData[0].length} key landmarks`);
+      }
     }
-  
-    // startup both in parallel
-    await initPose()
-    // start video
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true })
-      webcam.value!.srcObject = stream
-      webcam.value!.play()
-      startDetection()
-    } catch(e) {
-      console.error(e)
-    }
-  })
-  
-  onBeforeUnmount(() => {
-    window.removeEventListener('beforeunload', handleUnload)
-    ws?.close()
-    pc?.close()
-  })
-  </script>
-  
-  <style scoped>
-  .simple_pose_container {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 1em;
-    margin-top: 1em;
+    animationId = requestAnimationFrame(loop);
   }
-  .video_wrapper {
-    position: relative;
-    width: 320px; height: 240px;
-  }
-  video, .webcam_overlay_canvas,
-  .world_canvas {
-    width: 320px; height: 240px;
-    transform: scaleX(-1);
-    border: 1px solid #ccc;
-  }
-  .webcam_overlay_canvas {
-    position: absolute; top: 0; left: 0;
-    pointer-events: none;
-  }
-  .world_landmarks { text-align: center; }
-  </style>
-  
+  loop();
+}
+
+async function initCamera() {
+  const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+  if (webcam.value) webcam.value.srcObject = stream;
+  await startLoop();
+}
+
+onMounted(async () => {
+  await initPose();
+  await initCamera();
+});
+
+onBeforeUnmount(() => {
+  animationId && cancelAnimationFrame(animationId);
+  const tracks = (webcam.value?.srcObject as MediaStream)?.getTracks() || [];
+  tracks.forEach((t) => t.stop());
+  poseLandmarker?.close?.();
+});
+</script>
+
+<style scoped>
+.container {
+  display: flex;
+  flex-direction: row;
+  gap: 2rem;
+  padding: 1rem;
+}
+.chat-panel {
+  flex: 1;
+  border-right: 1px solid #ccc;
+  padding-right: 1rem;
+}
+.messages {
+  max-height: 60vh;
+  overflow-y: auto;
+  margin-bottom: 1rem;
+}
+.message {
+  padding: 0.25rem 0;
+}
+.controls button {
+  margin-bottom: 0.5rem;
+}
+.pose-panel {
+  flex: 2;
+}
+.grid-container {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+.video-wrapper {
+  position: relative;
+  width: 400px;
+  height: 300px;
+}
+video,
+.overlay,
+.world-canvas {
+  width: 400px;
+  height: 300px;
+  transform: scaleX(-1);
+}
+
+.overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}
+.world-canvas {
+  border: 1px solid #aaa;
+}
+</style>
