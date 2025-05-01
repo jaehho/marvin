@@ -4,7 +4,8 @@ export default {
     return {
       pages: [
         { name: 'Home', path: '/' },
-        { name: 'Pose', path: '/simple_pose' },
+        { name: 'Pose', path: '/pose' },
+        { name: 'Client', path: '/client' },
         { name: 'Marvin', path: '/marvin' },
       ]
     }
