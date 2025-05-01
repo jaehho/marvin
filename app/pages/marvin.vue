@@ -2,10 +2,8 @@
   <div>
     <h2>Spoke {{ localId }}</h2>
 
-    <!-- Message log -->
     <div v-for="(msg, idx) in messages" :key="idx">{{ msg }}</div>
 
-    <!-- Chat input -->
     <input
       v-model="input"
       @keyup.enter="sendMessage"
@@ -15,14 +13,12 @@
       Send
     </button>
 
-    <!-- Control/Queue button -->
     <div style="margin-top: 1em">
       <button @click="handleButtonClick">
         {{ dynamicButtonText }}
       </button>
     </div>
 
-    <!-- Status display -->
     <div style="margin-top: 0.5em">
       <p>{{ controlStatus }}</p>
     </div>
@@ -38,19 +34,16 @@ const hubId = 'hub';
 
 let pc, dc, ws;
 
-// Reactive state
 const input = ref('');
 const messages = ref([]);
 const status = ref('available');
 const control = ref(null);
 const queue = ref([]);
 
-// Simple logger
 function log(msg) {
   console.log(`[DEBUG] [${localId}] ${msg}`);
 }
 
-// Compute a single mode for this client:
 const clientMode = computed(() => {
   if (control.value === localId) return 'in_control';
   if (queue.value.includes(localId)) return 'in_queue';
@@ -58,7 +51,6 @@ const clientMode = computed(() => {
   return 'others_control';
 });
 
-// Map each mode to button text, status text, and action:
 const modeConfig = {
   idle: {
     buttonText: 'Take Control',
@@ -82,21 +74,18 @@ const modeConfig = {
   }
 };
 
-// Computed properties for template
 const dynamicButtonText = computed(() => modeConfig[clientMode.value].buttonText);
 const controlStatus = computed(() => {
   const txt = modeConfig[clientMode.value].statusText;
   return typeof txt === 'function' ? txt() : txt;
 });
 
-// Single click handler
 function handleButtonClick() {
   const { actionType } = modeConfig[clientMode.value];
   ws.send(JSON.stringify({ type: actionType, from: localId }));
   log(`Sent ${actionType}`);
 }
 
-// Sending chat messages
 function sendMessage() {
   if (clientMode.value !== 'in_control') {
     messages.value.push('[System] You must have control to send messages.');
@@ -113,8 +102,19 @@ function sendMessage() {
   input.value = '';
 }
 
-// WebRTC + WebSocket setup
+function handleUnload() {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    if (control.value === localId) {
+      ws.send(JSON.stringify({ type: 'give_up_control', from: localId }));
+    } else if (queue.value.includes(localId)) {
+      ws.send(JSON.stringify({ type: 'leave_queue', from: localId }));
+    }
+  }
+}
+
 onMounted(async () => {
+  window.addEventListener('beforeunload', handleUnload);
+
   pc = new RTCPeerConnection({
     iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
   });
@@ -163,7 +163,6 @@ onMounted(async () => {
         break;
 
       case 'queue_update':
-        // data.queue is an array of {client_id, queue_position}
         queue.value = data.queue.map(c => c.client_id);
         data.queue.forEach(c => {
           if (c.client_id === localId) {
@@ -198,11 +197,8 @@ onMounted(async () => {
 });
 
 onBeforeUnmount(() => {
+  window.removeEventListener('beforeunload', handleUnload);
   ws?.close();
   pc?.close();
-  // If we’re still in the queue when leaving page, leave cleanly
-  if (clientMode.value === 'in_queue') {
-    ws.send(JSON.stringify({ type: 'leave_queue', from: localId }));
-  }
 });
 </script>
