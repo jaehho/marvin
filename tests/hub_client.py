@@ -25,11 +25,18 @@ async def handle_offer(msg, ws):
         @channel.on("message")
         def on_message(message):
             print(f"From {client_id}: {message}")
-            # Broadcast to all other clients
-            for other_id, info in clients.items():
-                if other_id != client_id and info["dc"]:
-                    info["dc"].send(f"[{client_id}] {message}")
-                    print(f"Relayed to {other_id}")
+            # # Broadcast to all other clients
+            # for other_id, info in clients.items():
+            #     if other_id != client_id and info["dc"]:
+            #         info["dc"].send(f"[{client_id}] {message}")
+            #         print(f"Relayed to {other_id}")
+            # Only send the message back to the originating client (if required)
+            if client_id in clients:
+                info = clients.get(client_id)
+                if info and info["dc"]:
+                    info["dc"].send(f"[hub] {message}")  # Forward the message back to the client
+                    print(f"Relayed message to {client_id}")
+
 
     await pc.setRemoteDescription(offer)
     answer = await pc.createAnswer()
