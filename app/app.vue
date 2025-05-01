@@ -5,7 +5,7 @@ export default {
       pages: [
         { name: 'Home', path: '/' },
         { name: 'Pose', path: '/simple_pose' },
-        { name: 'Test', path: '/test' },
+        { name: 'Marvin', path: '/marvin' },
       ]
     }
   }
