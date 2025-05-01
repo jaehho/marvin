@@ -29,28 +29,24 @@ function sendMessage() {
   }
 }
 
-function joinQueueOrClaimControl() {
+function handleButtonClick() {
   if (control.value === null && !queue.value.includes(localId)) {
-    // No control and not in queue: Claim Control
+    // No control and not in the queue: Claim control
     ws.send(JSON.stringify({ type: 'claim_control', from: localId }));
     log('Attempting to claim control');
-  } else if (control.value !== null && !queue.value.includes(localId)) {
+  } else if (control.value !== localId && !queue.value.includes(localId)) {
     // Someone has control and client is not in the queue: Join the Queue
     ws.send(JSON.stringify({ type: 'join_queue', from: localId }));
     log('Attempting to join the queue');
-  }
-}
-
-function giveUpControl() {
-  if (control.value === localId) {
+  } else if (control.value === localId) {
+    // If the client has control: Give up control
     ws.send(JSON.stringify({ type: 'give_up_control', from: localId }));
     log('Giving up control');
+  } else if (queue.value.includes(localId)) {
+    // If the client is in the queue: Leave the queue
+    ws.send(JSON.stringify({ type: 'leave_queue', from: localId }));
+    log('Leaving the queue');
   }
-}
-
-function leaveQueue() {
-  ws.send(JSON.stringify({ type: 'leave_queue', from: localId }));
-  log('Leaving the queue');
 }
 
 const controlStatus = computed(() => {
@@ -62,6 +58,18 @@ const controlStatus = computed(() => {
     return 'Take control';
   } else {
     return 'Join queue';
+  }
+});
+
+const dynamicButtonText = computed(() => {
+  if (control.value === null && !queue.value.includes(localId)) {
+    return 'Take Control'; // If neither control nor in queue, offer to take control
+  } else if (control.value !== null && queue.value.includes(localId)) {
+    return 'Leave Queue'; // If client is in queue, show "Leave Queue"
+  } else if (control.value === localId) {
+    return 'Give Up Control'; // If client has control, show "Give Up Control"
+  } else {
+    return 'Join Queue'; // Default if control is not held
   }
 });
 
@@ -144,7 +152,7 @@ onBeforeUnmount(() => {
   ws?.close();
   pc?.close();
   if (queue.value.includes(localId)) {
-    leaveQueue();  // Automatically leave the queue when leaving the page
+    handleButtonClick();  // Automatically take the appropriate action when leaving the page
   }
 });
 </script>
@@ -157,11 +165,9 @@ onBeforeUnmount(() => {
     <button @click="sendMessage" :disabled="control !== localId">Send</button>
 
     <div>
-      <button @click="joinQueueOrClaimControl" :disabled="queue.includes(localId) || control === localId">
-        {{ control === null ? 'Claim Control' : 'Join Queue' }}
+      <button @click="handleButtonClick" :disabled="!['Take Control', 'Join Queue', 'Give Up Control', 'Leave Queue'].includes(dynamicButtonText)">
+        {{ dynamicButtonText }}
       </button>
-      <button @click="giveUpControl" :disabled="control !== localId">Give Up Control</button>
-      <button @click="leaveQueue" :disabled="!queue.includes(localId)">Leave Queue</button>
     </div>
 
     <div>
