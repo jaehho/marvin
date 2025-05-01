@@ -1,86 +1,125 @@
+<template>
+  <div>
+    <h2>Spoke {{ localId }}</h2>
+
+    <!-- Message log -->
+    <div v-for="(msg, idx) in messages" :key="idx">{{ msg }}</div>
+
+    <!-- Chat input -->
+    <input
+      v-model="input"
+      @keyup.enter="sendMessage"
+      placeholder="Type a message..."
+    />
+    <button @click="sendMessage" :disabled="clientMode !== 'in_control'">
+      Send
+    </button>
+
+    <!-- Control/Queue button -->
+    <div style="margin-top: 1em">
+      <button @click="handleButtonClick">
+        {{ dynamicButtonText }}
+      </button>
+    </div>
+
+    <!-- Status display -->
+    <div style="margin-top: 0.5em">
+      <p>{{ controlStatus }}</p>
+    </div>
+  </div>
+</template>
+
 <script setup>
-import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 
 const SIGNAL_URL = 'ws://24.193.235.114:9000/ws';
 const localId = crypto.randomUUID();
 const hubId = 'hub';
+
 let pc, dc, ws;
+
+// Reactive state
 const input = ref('');
 const messages = ref([]);
-const status = ref('available');  // Track the status of the system (available or busy)
-const control = ref(null);  // Track which client has control of the channel
-const queue = ref([]);  // Track the ordered queue of clients
+const status = ref('available');
+const control = ref(null);
+const queue = ref([]);
 
+// Simple logger
 function log(msg) {
   console.log(`[DEBUG] [${localId}] ${msg}`);
 }
 
-function sendMessage() {
-  if (control.value === localId && dc && dc.readyState === 'open' && input.value.trim()) {
-    dc.send(input.value);
-    messages.value.push(`[me] ${input.value}`);
-    input.value = '';
-  } else if (control.value !== localId) {
-    messages.value.push('[System] You must have control to send messages.');
-    log('Cannot send message: You do not have control');
-  } else {
-    messages.value.push('[System] The system is busy or you cannot send an empty message.');
-    log('Message sending failed: System is busy or message is empty');
-  }
-}
+// Compute a single mode for this client:
+const clientMode = computed(() => {
+  if (control.value === localId) return 'in_control';
+  if (queue.value.includes(localId)) return 'in_queue';
+  if (control.value === null) return 'idle';
+  return 'others_control';
+});
 
-function handleButtonClick() {
-  if (control.value === null && !queue.value.includes(localId)) {
-    // No control and not in the queue: Claim control
-    ws.send(JSON.stringify({ type: 'claim_control', from: localId }));
-    log('Attempting to claim control');
-  } else if (control.value !== localId && !queue.value.includes(localId)) {
-    // Someone else has control and client is not in the queue: Join the Queue
-    ws.send(JSON.stringify({ type: 'join_queue', from: localId }));
-    log('Attempting to join the queue');
-  } else if (control.value === localId) {
-    // If the client has control: Give up control
-    ws.send(JSON.stringify({ type: 'give_up_control', from: localId }));
-    log('Giving up control');
-  } else if (queue.value.includes(localId)) {
-    // If the client is in the queue: Leave the queue
-    ws.send(JSON.stringify({ type: 'leave_queue', from: localId }));
-    log('Leaving the queue');
+// Map each mode to button text, status text, and action:
+const modeConfig = {
+  idle: {
+    buttonText: 'Take Control',
+    statusText: 'You can take control',
+    actionType: 'claim_control'
+  },
+  others_control: {
+    buttonText: 'Join Queue',
+    statusText: 'You can join queue',
+    actionType: 'join_queue'
+  },
+  in_control: {
+    buttonText: 'Give Up Control',
+    statusText: 'You are in control',
+    actionType: 'give_up_control'
+  },
+  in_queue: {
+    buttonText: 'Leave Queue',
+    statusText: () => `You are in position ${queue.value.indexOf(localId) + 1} in the queue.`,
+    actionType: 'leave_queue'
   }
-}
+};
 
+// Computed properties for template
+const dynamicButtonText = computed(() => modeConfig[clientMode.value].buttonText);
 const controlStatus = computed(() => {
-  log(`Control: ${control.value}, Queue: ${queue.value}`);
-  if (control.value === localId) {
-    return 'You are in control';
-  } else if (queue.value.includes(localId)) {
-    return `You are in position ${queue.value.indexOf(localId) + 1} in the queue.`;
-  } else if (control.value === null) {
-    return 'You can take control';
-  } else {
-    return 'You can join queue';
-  }
+  const txt = modeConfig[clientMode.value].statusText;
+  return typeof txt === 'function' ? txt() : txt;
 });
 
-const dynamicButtonText = computed(() => {
-  if (control.value === null && !queue.value.includes(localId)) {
-    return 'Take Control'; // If neither control nor in queue, offer to take control
-  } else if (control.value === localId) {
-    return 'Give Up Control'; // If client has control, show "Give Up Control"
-  } else if (queue.value.includes(localId)) {
-    return 'Leave Queue'; // If client is in the queue, show "Leave Queue"
-  } else {
-    return 'Join Queue'; // Default if control is not held and not in queue
-  }
-});
+// Single click handler
+function handleButtonClick() {
+  const { actionType } = modeConfig[clientMode.value];
+  ws.send(JSON.stringify({ type: actionType, from: localId }));
+  log(`Sent ${actionType}`);
+}
 
+// Sending chat messages
+function sendMessage() {
+  if (clientMode.value !== 'in_control') {
+    messages.value.push('[System] You must have control to send messages.');
+    log('Cannot send: not in control');
+    return;
+  }
+  if (!input.value.trim()) {
+    messages.value.push('[System] Cannot send an empty message.');
+    log('Cannot send: empty');
+    return;
+  }
+  dc.send(input.value);
+  messages.value.push(`[me] ${input.value}`);
+  input.value = '';
+}
+
+// WebRTC + WebSocket setup
 onMounted(async () => {
   pc = new RTCPeerConnection({
     iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
   });
 
   ws = new WebSocket(SIGNAL_URL);
-
   ws.onopen = async () => {
     log('Connected to signaling server');
     ws.send(JSON.stringify({ type: 'register', id: localId }));
@@ -94,7 +133,6 @@ onMounted(async () => {
 
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
-
     ws.send(JSON.stringify({
       type: 'offer',
       sdp: offer.sdp,
@@ -106,30 +144,39 @@ onMounted(async () => {
 
   ws.onmessage = async (event) => {
     const data = JSON.parse(event.data);
-    if (data.type === 'answer') {
-      await pc.setRemoteDescription(data);
-      log('Received answer');
-    } else if (data.type === 'candidate') {
-      await pc.addIceCandidate(data.candidate);
-      log('Added ICE candidate');
-    } else if (data.type === 'status') {
-      status.value = data.status;  // Update the client status based on the server's response
-      control.value = data.control;  // Update who currently has control
-      queue.value = data.queue;  // Update the queue with the ordered list
-      log(`System status: ${status.value}, Control: ${control.value}, Queue: ${queue.value}`);
-    } else if (data.type === 'queue_update') {
-      // Process the updated queue and log the position correctly
-      queue.value = data.queue.map(client => client.client_id);  // Update queue with only client_ids
-      data.queue.forEach(client => {
-          if (client.client_id === localId) {
-              log(`Queue updated: You are in position ${client.queue_position}`);
-          }});
-    } else if (data.type === 'busy') {
-      messages.value.push(data.message);  // Show the busy message to the user
-      log('System is busy: ' + data.message);
-    } else if (data.type === 'error') {
-      messages.value.push(data.message);  // Show error messages to the user
-      log('Error: ' + data.message);
+    switch (data.type) {
+      case 'answer':
+        await pc.setRemoteDescription(data);
+        log('Received answer');
+        break;
+
+      case 'candidate':
+        await pc.addIceCandidate(data.candidate);
+        log('Added ICE candidate');
+        break;
+
+      case 'status':
+        status.value = data.status;
+        control.value = data.control;
+        queue.value = data.queue;
+        log(`Status update: control=${control.value}, queue=[${queue.value}]`);
+        break;
+
+      case 'queue_update':
+        // data.queue is an array of {client_id, queue_position}
+        queue.value = data.queue.map(c => c.client_id);
+        data.queue.forEach(c => {
+          if (c.client_id === localId) {
+            log(`Queue position: ${c.queue_position}`);
+          }
+        });
+        break;
+
+      case 'busy':
+      case 'error':
+        messages.value.push(`[System] ${data.message}`);
+        log(`${data.type.toUpperCase()}: ${data.message}`);
+        break;
     }
   };
 
@@ -153,27 +200,9 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   ws?.close();
   pc?.close();
-  if (queue.value.includes(localId)) {
-    handleButtonClick();  // Automatically take the appropriate action when leaving the page
+  // If we’re still in the queue when leaving page, leave cleanly
+  if (clientMode.value === 'in_queue') {
+    ws.send(JSON.stringify({ type: 'leave_queue', from: localId }));
   }
 });
 </script>
-
-<template>
-  <div>
-    <h2>Spoke {{ localId }}</h2>
-    <div v-for="(msg, idx) in messages" :key="idx">{{ msg }}</div>
-    <input v-model="input" @keyup.enter="sendMessage" placeholder="Type a message..." />
-    <button @click="sendMessage" :disabled="control !== localId">Send</button>
-
-    <div>
-      <button @click="handleButtonClick" :disabled="!['Take Control', 'Join Queue', 'Give Up Control', 'Leave Queue'].includes(dynamicButtonText)">
-        {{ dynamicButtonText }}
-      </button>
-    </div>
-
-    <div>
-      <p>{{ controlStatus }}</p>
-    </div>
-  </div>
-</template>
