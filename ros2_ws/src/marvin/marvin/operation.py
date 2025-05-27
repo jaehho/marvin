@@ -11,31 +11,25 @@ from rclpy.action import ActionClient
 from std_srvs.srv import Trigger
 from control_msgs.msg import JointJog
 from control_msgs.action import GripperCommand
+from custom_interfaces.msg import HandLandmark
 
-# Key definitions
-KEY_O   = 'o'
-KEY_P   = 'p'
-KEY_ESC = '\x1b'
+
+# Gripper positions
+OPEN_POSITION  = 0.019  # Open gripper position
+CLOSED_POSITION = -0.01  # Closed gripper position
 
 ARM_JOINT_TOPIC             = '/servo_node/delta_joint_cmds'
 INTERMEDIATE_JOINT_TOPIC    = '/intermediate_joint_cmds'
+INTERMEDIATE_HAND_TOPIC     = '/hand_landmarks'
 GRIPPER_ACTION              = 'gripper_controller/gripper_cmd'
 START_SERVO_SRV             = '/servo_node/start_servo'
 STOP_SERVO_SRV              = '/servo_node/stop_servo'
 BASE_FRAME_ID               = 'link1'
 PUBLISH_RATE_HZ             = 100
 
-class KeyboardReader:
-    def __init__(self):
-        self.fd = sys.stdin.fileno()
-        self.old = termios.tcgetattr(self.fd)
-        tty.setcbreak(self.fd)
-    def read_key(self):
-        return sys.stdin.read(1)
-    def shutdown(self):
-        termios.tcsetattr(self.fd, termios.TCSANOW, self.old)
 
 class TeleopNode(Node):
+
     def __init__(self):
         super().__init__('open_manipulator_x_teleop')
 
@@ -46,6 +40,12 @@ class TeleopNode(Node):
         self.create_subscription(
             JointJog, INTERMEDIATE_JOINT_TOPIC,
             self.external_joint_cb, 10
+        )
+
+        # Subscriber for hand landmarks (simple open/close gripper control)
+        self.create_subscription(
+            HandLandmark, INTERMEDIATE_HAND_TOPIC,
+            self.hand_cb, 10
         )
 
         # Gripper action client
@@ -63,9 +63,11 @@ class TeleopNode(Node):
         self._wait_srv(self.stop_cli,  'stop_servo')
         self._call_trigger(self.start_cli, 'start')
 
+
     def _spin_loop(self):
         while rclpy.ok():
             rclpy.spin_once(self, timeout_sec=0.1)
+
 
     def _wait_srv(self, cli, name):
         self.get_logger().info(f'Waiting for {name} service...')
@@ -73,6 +75,7 @@ class TeleopNode(Node):
             self.get_logger().error(f'Failed to connect to {name}')
         else:
             self.get_logger().info(f'Connected to {name}')
+
 
     def _call_trigger(self, cli, name):
         req = Trigger.Request()
@@ -82,6 +85,7 @@ class TeleopNode(Node):
             self.get_logger().info(f'{name} service succeeded')
         else:
             self.get_logger().warn(f'{name} service failed or timed out')
+
 
     def external_joint_cb(self, msg: JointJog):
         # Stamp and forward to servo
@@ -93,6 +97,7 @@ class TeleopNode(Node):
         self.joint_pub.publish(out)
         self.get_logger().info(f'Forwarded external JointJog: {msg.joint_names}')
 
+
     def send_gripper_goal(self, position: float):
         goal = GripperCommand.Goal()
         goal.command.position   = position
@@ -101,35 +106,35 @@ class TeleopNode(Node):
         self.gripper_ac.wait_for_server()
         self.gripper_ac.send_goal_async(goal)
 
-    def run(self):
-        kb = KeyboardReader()
-        self.get_logger().info('--- Gripper Teleop (joint cmds from topic) ---')
-        self.get_logger().info('o: open gripper   p: close gripper   ESC: quit')
-        try:
-            while rclpy.ok():
-                c = kb.read_key()
-                if c == KEY_O:
-                    self.send_gripper_goal(0.019)
-                elif c == KEY_P:
-                    self.send_gripper_goal(-0.01)
-                elif c == KEY_ESC:
-                    self.get_logger().info('ESC pressed: shutting down')
-                    break
-                else:
-                    # ignore other keys
-                    continue
-        except Exception as e:
-            self.get_logger().error(f'Exception: {e}')
-        finally:
-            kb.shutdown()
-            self._call_trigger(self.stop_cli, 'stop')
-            rclpy.shutdown()
+
+    def hand_cb(self, msg: HandLandmark):
+        """
+        msg.label  = ['left_hand', 'right_hand']
+        msg.status = [ True/False,  True/False ]
+        """
+        for hand_label, is_open in zip(msg.label, msg.status):
+            if hand_label == 'left_hand':
+                target = OPEN_POSITION  if is_open else CLOSED_POSITION
+                self.send_gripper_goal(target)
+                self.get_logger().info(f"Left hand is {'open' if is_open else 'closed'}, sending gripper command: {target:.3f}")
+            elif hand_label == 'right_hand':
+                # for now, ignore right hand
+                pass
+    
+
+    def destroy_node(self):
+        self._call_trigger(self.stop_cli, 'stop')
+        super().destroy_node()
+
+
 
 def main(args=None):
     rclpy.init(args=args)
     node = TeleopNode()
     signal.signal(signal.SIGINT, lambda s,f: rclpy.shutdown())
-    node.run()
+    rclpy.spin(node)
+    node.destroy_node()
+    rclpy.shutdown()
 
 if __name__ == '__main__':
     main()

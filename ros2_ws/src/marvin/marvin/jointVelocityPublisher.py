@@ -7,7 +7,7 @@ from control_msgs.msg import JointJog
 class JointErrorToVelocityPublisher(Node):
     """
     Subscribes to: [topic] /joint_goals, /joint_states
-    Publishes to: [topic] /joint_velocity_commands (JointJog formatting for MoveIt Servo usage)
+    Publishes to: [topic] /intermediate_joint_cmds (JointJog formatting for MoveIt Servo usage)
     """
     def __init__(self):
         super().__init__('joint_error_to_velocity_publisher')
@@ -63,6 +63,9 @@ class JointErrorToVelocityPublisher(Node):
                 velocity = np.clip(self.gain * error, -self.velocity_limit, self.velocity_limit)
                 joint_errors[joint_name] = error
                 joint_velocities[joint_name] = velocity
+                # want abduction specifically to have higher gain
+                if 'shoulder_adduction' in joint_name:
+                    joint_velocities[joint_name] *= 2.0
             else:
                 self.get_logger().warn(f"Joint '{joint_name}' not found in actual joint states.")
 
