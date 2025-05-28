@@ -35,6 +35,10 @@ class PoseDetectionPublisher(Node):
             self.get_logger().error("Cannot open webcam")
             return
 
+        # Set fullscreen window
+        cv2.namedWindow('MediaPipe Pose', cv2.WND_PROP_FULLSCREEN)
+        cv2.setWindowProperty('MediaPipe Pose', cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+
         try:
             while cap.isOpened():
                 success, image = cap.read()
