@@ -91,7 +91,7 @@ class TeleopNode(Node):
         # Stamp and forward to servo
         out = JointJog()
         out.header.stamp = self.get_clock().now().to_msg()
-        out.header.frame_id = BASE_FRAME_ID
+        out.header.frame_id = BASE_FRAME_ID #pretty sure this is actually left/right_link1 so idk if need to add side to name
         out.joint_names = msg.joint_names
         out.velocities  = msg.velocities
         self.joint_pub.publish(out)
