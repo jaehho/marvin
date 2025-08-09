@@ -2,3 +2,11 @@
 __pycache__
 
 .venv
+
+*.cut
+*.log
+*.aux
+*.out
+*.bbl
+*.blg
+*.gz
