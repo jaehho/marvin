@@ -55,12 +55,12 @@ def generate_launch_description():
 
         DeclareLaunchArgument(
             'left_port_name',
-            default_value='/dev/ttyUSB0',
+            default_value='/dev/ttyUSB1',
             description='The port name to connect to left arm hardware.'),
 
         DeclareLaunchArgument(
             'right_port_name',
-            default_value='/dev/ttyUSB1',
+            default_value='/dev/ttyUSB0',
             description='The port name to connect to right arm hardware.'),
 
         IncludeLaunchDescription(

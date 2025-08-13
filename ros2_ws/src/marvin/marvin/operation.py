@@ -21,10 +21,10 @@ CLOSED_POSITION = -0.01  # Closed gripper position
 ARM_JOINT_TOPIC             = '/servo_node/delta_joint_cmds'
 INTERMEDIATE_JOINT_TOPIC    = '/intermediate_joint_cmds'
 INTERMEDIATE_HAND_TOPIC     = '/hand_landmarks'
-GRIPPER_ACTION              = 'gripper_controller/gripper_cmd'
+GRIPPER_ACTION              = 'right_gripper_controller/gripper_cmd'
 START_SERVO_SRV             = '/servo_node/start_servo'
 STOP_SERVO_SRV              = '/servo_node/stop_servo'
-BASE_FRAME_ID               = 'link1'
+BASE_FRAME_ID               = 'right_link1'
 PUBLISH_RATE_HZ             = 100
 
 

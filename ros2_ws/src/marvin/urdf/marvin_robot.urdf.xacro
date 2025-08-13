@@ -6,8 +6,8 @@
   <xacro:arg name="use_sim" default="false" />
   <xacro:arg name="use_fake_hardware" default="false" />
   <xacro:arg name="fake_sensor_commands" default="false" />
-  <xacro:arg name="port_name_left" default="/dev/ttyUSB0" />
-  <xacro:arg name="port_name_right" default="/dev/ttyUSB1" />
+  <xacro:arg name="port_name_left" default="/dev/ttyUSB1" />
+  <xacro:arg name="port_name_right" default="/dev/ttyUSB0" />
 
   <!-- Import Rviz colors -->
   <xacro:include filename="$(find marvin)/urdf/materials.xacro" />
@@ -74,7 +74,7 @@
   <xacro:open_manipulator_x_gazebo side="right" />
 
   <xacro:open_manipulator_x_system
-    name="OpenManipulatorXSystem" prefix="$(arg prefix)" 
+    name="left_arm_system" prefix="$(arg prefix)" 
     side ="left"
     use_sim="$(arg use_sim)"
     use_fake_hardware="$(arg use_fake_hardware)"
@@ -82,7 +82,7 @@
     port_name="$(arg port_name_left)"/>
 
     <xacro:open_manipulator_x_system
-    name="OpenManipulatorXSystem" prefix="$(arg prefix)" 
+    name="right_arm_system" prefix="$(arg prefix)" 
     side ="right"
     use_sim="$(arg use_sim)"
     use_fake_hardware="$(arg use_fake_hardware)"

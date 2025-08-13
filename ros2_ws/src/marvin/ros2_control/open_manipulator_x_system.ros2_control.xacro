@@ -40,7 +40,9 @@
             <plugin>dynamixel_hardware_interface/DynamixelHardware</plugin>
             <param name="port_name">${port_name}</param>
             <param name="baud_rate">1000000</param>
-            <param name="error_timeout_sec">0.2</param>
+            <!--param name="error_timeout_sec">0.2</param-->
+            <param name="error_timeout_ms">200</param>  <!-- 0.2 s -->
+            <param name="torque_enable">1</param>
             <param name="dynamixel_model_folder">/param/dxl_model</param>
 
             <!-- 4 revolute + 1 actuated gripper = 5 transmissions; 6th joint is the mimic -->
@@ -66,7 +68,7 @@
               0, 0, 0, 0, 1, 0
             </param>
 
-            <param name="ros_update_freq">200</param>
+            <param name="ros_update_freq">100</param>
             <param name="dynamixel_state_pub_msg_name">dynamixel_hardware_interface/dxl_state</param>
             <param name="get_dynamixel_data_srv_name">dynamixel_hardware_interface/get_dxl_data</param>
             <param name="set_dynamixel_data_srv_name">dynamixel_hardware_interface/set_dxl_data</param>
@@ -134,7 +136,7 @@
       </joint>
 
       <!-- Dynamixel devices on this port -->
-      <gpio name="dxl1">
+      <gpio name="${side}_dxl1">
         <param name="type">dxl</param>
         <param name="ID">${dxl_id1}</param>
         <command_interface name="Goal Position"/>
@@ -152,7 +154,7 @@
         <param name="Return Delay Time">0</param>
       </gpio>
 
-      <gpio name="dxl2">
+      <gpio name="${side}_dxl2">
         <param name="type">dxl</param>
         <param name="ID">${dxl_id2}</param>
         <command_interface name="Goal Position"/>
@@ -170,7 +172,7 @@
         <param name="Return Delay Time">0</param>
       </gpio>
 
-      <gpio name="dxl3">
+      <gpio name="${side}_dxl3">
         <param name="type">dxl</param>
         <param name="ID">${dxl_id3}</param>
         <command_interface name="Goal Position"/>
@@ -188,7 +190,7 @@
         <param name="Return Delay Time">0</param>
       </gpio>
 
-      <gpio name="dxl4">
+      <gpio name="${side}_dxl4">
         <param name="type">dxl</param>
         <param name="ID">${dxl_id4}</param>
         <command_interface name="Goal Position"/>
@@ -206,7 +208,7 @@
         <param name="Return Delay Time">0</param>
       </gpio>
 
-      <gpio name="dxl5">
+      <gpio name="${side}_dxl5">
         <param name="type">dxl</param>
         <param name="ID">${dxl_id5}</param>
         <command_interface name="Goal Position"/>

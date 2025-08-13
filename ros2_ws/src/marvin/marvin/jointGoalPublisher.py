@@ -15,7 +15,7 @@ class JointGoalPublisher(Node):
         super().__init__('joint_goal_publisher')
         
         # Define joint names for each side
-        self.sides = ['left'] # TODO: Add 'right' side implementation
+        self.sides = ['left','right'] # TODO: Add 'right' side implementation
         self.joint_types = ['shoulder_flexion', 'shoulder_adduction', 'elbow_flexion']
         self.joint_names = [f'{side}_{joint_type}' for side in self.sides for joint_type in self.joint_types]
         
@@ -48,7 +48,8 @@ class JointGoalPublisher(Node):
             #     f'{side}_joint4', f'{side}_gripper'
             # ])
             robot_joint_names.extend([
-                'joint1', 'joint2', 'joint3', 'joint4', 'gripper_left_joint', 'gripper_right_joint'
+                'left_joint1', 'left_joint2', 'left_joint3', 'left_joint4', 'left_gripper', 'left_gripper_sub',
+                'right_joint1', 'right_joint2', 'right_joint3', 'right_joint4', 'right_gripper', 'right_gripper_sub',   
             ])
             
             if side == 'left':
@@ -60,7 +61,8 @@ class JointGoalPublisher(Node):
                 np.clip(shoulder_flexion_angle, -2.82743, 2.82743),
                 np.clip(np.pi / 2 - self.joint_angles[f'{side}_shoulder_adduction'], -1.79071, 1.57080),
                 np.clip(np.pi / 2 - self.joint_angles[f'{side}_elbow_flexion'], -0.94248, 1.38230),
-                0.0, 0.0, 0.0  # Placeholder for other joint values not computed
+                0.0, 0.0, 0.0,  # Placeholder for other joint values not computed
+                0.0, 0.0, 0.0, 0.0, 0.0, 0.0
             ])
         
         joint_goal_msg.name = robot_joint_names
