@@ -6,7 +6,7 @@
   <xacro:include filename="$(find marvin)/urdf/materials.xacro" />
 
   <!-- Import all Gazebo-customization elements, including Gazebo colors -->
-  <!--xacro:include filename="/home/jaeho/marvin/ros2_ws/src/marvin/urdf2/open_manipulator.gazebo.xacro" /-->
+  <!--xacro:include filename="/home/jaeho/marvin/ros2_ws/src/marvin/urdf/open_manipulator.gazebo.xacro" /-->
 
   <!-- Import Transmission -->
   <!-- xacro:include filename="$(find marvin)/urdf/open_manipulator.transmission.xacro" /-->
