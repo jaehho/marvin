@@ -30,7 +30,7 @@
     <color rgba="0.8705882352941177 0.8117647058823529 0.7647058823529411 1.0"/>
   </material>
   <!-- Import all Gazebo-customization elements, including Gazebo colors -->
-  <!--xacro:include filename="/home/jaeho/marvin/ros2_ws/src/marvin/urdf2/open_manipulator.gazebo.xacro" /-->
+  <!--xacro:include filename="/home/jaeho/marvin/ros2_ws/src/marvin/urdf/open_manipulator.gazebo.xacro" /-->
   <transmission name="tran1">
     <type>transmission_interface/SimpleTransmission</type>
     <joint name="joint1">
@@ -121,18 +121,18 @@
     <!-- Rotate by pi -->
   </joint>
   <!-- Link 1 -->
-  <link name="left_link1">
+  <link name="link1_left">
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://marvin/meshes/stl/chain_link1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="/home/jaeho/marvin/ros2_ws/install/marvin/share/marvin/meshes/stl/chain_link1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="grey"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://marvin/meshes/stl/chain_link1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="/home/jaeho/marvin/ros2_ws/install/marvin/share/marvin/meshes/stl/chain_link1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
     </collision>
     <inertial>
@@ -143,26 +143,26 @@
     <parent link="left_arm_joint"/>
   </link>
   <!-- Joint 1 -->
-  <joint name="left_joint1" type="revolute">
-    <parent link="left_link1"/>
-    <child link="left_link2"/>
+  <joint name="joint1_left" type="revolute">
+    <parent link="link1_left"/>
+    <child link="link2_left"/>
     <origin rpy="0 0 0" xyz="0.012 0.0 0.017"/>
     <axis xyz="0 0 1"/>
-    <limit effort="1" lower="-2.827433388230814" upper="2.827433388230814" velocity="4.8" acceleration="1.0"/>
+    <limit effort="1" lower="-2.827433388230814" upper="2.827433388230814" velocity="4.8"/>
   </joint>
   <!--  Link 2 -->
-  <link name="left_link2">
+  <link name="link2_left">
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0.019"/>
       <geometry>
-        <mesh filename="package://marvin/meshes/stl/chain_link2.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="/home/jaeho/marvin/ros2_ws/install/marvin/share/marvin/meshes/stl/chain_link2.stl" scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="grey"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0.019"/>
       <geometry>
-        <mesh filename="package://marvin/meshes/stl/chain_link2.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="/home/jaeho/marvin/ros2_ws/install/marvin/share/marvin/meshes/stl/chain_link2.stl" scale="0.001 0.001 0.001"/>
       </geometry>
     </collision>
     <inertial>
@@ -172,26 +172,26 @@
     </inertial>
   </link>
   <!--  Joint 2 -->
-  <joint name="left_joint2" type="revolute">
-    <parent link="left_link2"/>
-    <child link="left_link3"/>
+  <joint name="joint2_left" type="revolute">
+    <parent link="link2_left"/>
+    <child link="link3_left"/>
     <origin rpy="0 0 0" xyz="0.0 0.0 0.0595"/>
     <axis xyz="0 1 0"/>
-    <limit effort="1" lower="-1.790707812546182" upper="1.5707963267948966" velocity="4.8" acceleration="1.0"/>
+    <limit effort="1" lower="-1.790707812546182" upper="1.5707963267948966" velocity="4.8"/>
   </joint>
   <!--  Link 3 -->
-  <link name="left_link3">
+  <link name="link3_left">
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://marvin/meshes/stl/chain_link3.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="/home/jaeho/marvin/ros2_ws/install/marvin/share/marvin/meshes/stl/chain_link3.stl" scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="grey"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://marvin/meshes/stl/chain_link3.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="/home/jaeho/marvin/ros2_ws/install/marvin/share/marvin/meshes/stl/chain_link3.stl" scale="0.001 0.001 0.001"/>
       </geometry>
     </collision>
     <inertial>
@@ -201,26 +201,26 @@
     </inertial>
   </link>
   <!--  Joint 3 -->
-  <joint name="left_joint3" type="revolute">
-    <parent link="left_link3"/>
-    <child link="left_link4"/>
+  <joint name="joint3_left" type="revolute">
+    <parent link="link3_left"/>
+    <child link="link4_left"/>
     <origin rpy="0 0 0" xyz="0.024 0 0.128"/>
     <axis xyz="0 1 0"/>
-    <limit effort="1" lower="-0.9424777960769379" upper="1.382300767579509" velocity="4.8" acceleration="1.0"/>
+    <limit effort="1" lower="-0.9424777960769379" upper="1.382300767579509" velocity="4.8"/>
   </joint>
   <!--  Link 4 -->
-  <link name="left_link4">
+  <link name="link4_left">
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://marvin/meshes/stl/chain_link4.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="/home/jaeho/marvin/ros2_ws/install/marvin/share/marvin/meshes/stl/chain_link4.stl" scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="grey"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://marvin/meshes/stl/chain_link4.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="/home/jaeho/marvin/ros2_ws/install/marvin/share/marvin/meshes/stl/chain_link4.stl" scale="0.001 0.001 0.001"/>
       </geometry>
     </collision>
     <inertial>
@@ -230,26 +230,26 @@
     </inertial>
   </link>
   <!--  Joint 4 -->
-  <joint name="left_joint4" type="revolute">
-    <parent link="left_link4"/>
-    <child link="left_link5"/>
+  <joint name="joint4_left" type="revolute">
+    <parent link="link4_left"/>
+    <child link="link5_left"/>
     <origin rpy="0 0 0" xyz="0.124 0.0 0.0"/>
     <axis xyz="0 1 0"/>
-    <limit effort="1" lower="-1.790707812546182" upper="2.0420352248333655" velocity="4.8" acceleration="1.0"/>
+    <limit effort="1" lower="-1.790707812546182" upper="2.0420352248333655" velocity="4.8"/>
   </joint>
   <!--  Link 5 -->
-  <link name="left_link5">
+  <link name="link5_left">
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://marvin/meshes/stl/chain_link5.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="/home/jaeho/marvin/ros2_ws/install/marvin/share/marvin/meshes/stl/chain_link5.stl" scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="grey"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://marvin/meshes/stl/chain_link5.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="/home/jaeho/marvin/ros2_ws/install/marvin/share/marvin/meshes/stl/chain_link5.stl" scale="0.001 0.001 0.001"/>
       </geometry>
     </collision>
     <inertial>
@@ -259,26 +259,26 @@
     </inertial>
   </link>
   <!--  Gripper joint -->
-  <joint name="left_gripper" type="prismatic">
-    <parent link="left_link5"/>
-    <child link="left_gripper_link"/>
+  <joint name="gripper_left" type="prismatic">
+    <parent link="link5_left"/>
+    <child link="gripper_link_left"/>
     <origin rpy="0 0 0" xyz="0.0817 0.021 0.0"/>
     <axis xyz="0 1 0"/>
-    <limit effort="1" lower="-0.010" upper="0.019" velocity="4.8" acceleration="1.0"/>
+    <limit effort="1" lower="-0.010" upper="0.019" velocity="4.8"/>
   </joint>
   <!--  Gripper link -->
-  <link name="left_gripper_link">
+  <link name="gripper_link_left">
     <visual>
       <origin rpy="0 0 0" xyz="0.0 0.0 0"/>
       <geometry>
-        <mesh filename="package://marvin/meshes/stl/chain_link_grip_l.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="/home/jaeho/marvin/ros2_ws/install/marvin/share/marvin/meshes/stl/chain_link_grip_l.stl" scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="grey"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0.0 0.0 0"/>
       <geometry>
-        <mesh filename="package://marvin/meshes/stl/chain_link_grip_l.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="/home/jaeho/marvin/ros2_ws/install/marvin/share/marvin/meshes/stl/chain_link_grip_l.stl" scale="0.001 0.001 0.001"/>
       </geometry>
     </collision>
     <inertial>
@@ -288,27 +288,27 @@
     </inertial>
   </link>
   <!--  Gripper joint sub -->
-  <joint name="left_gripper_sub" type="prismatic">
-    <parent link="left_link5"/>
-    <child link="left_gripper_link_sub"/>
+  <joint name="gripper_sub_left" type="prismatic">
+    <parent link="link5_left"/>
+    <child link="gripper_link_sub_left"/>
     <origin rpy="0 0 0" xyz="0.0817 -0.021 0"/>
     <axis xyz="0 -1 0"/>
-    <limit effort="1" lower="-0.010" upper="0.019" velocity="4.8" acceleration="1.0"/>
-    <mimic joint="left_gripper" multiplier="1"/>
+    <limit effort="1" lower="-0.010" upper="0.019" velocity="4.8"/>
+    <mimic joint="gripper_left" multiplier="1"/>
   </joint>
   <!--  Gripper link sub -->
-  <link name="left_gripper_link_sub">
+  <link name="gripper_link_sub_left">
     <visual>
       <origin rpy="0 0 0" xyz="0.0 -0.0 0"/>
       <geometry>
-        <mesh filename="package://marvin/meshes/stl/chain_link_grip_r.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="/home/jaeho/marvin/ros2_ws/install/marvin/share/marvin/meshes/stl/chain_link_grip_r.stl" scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="grey"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0.0 -0.0 0"/>
       <geometry>
-        <mesh filename="package://marvin/meshes/stl/chain_link_grip_r.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="/home/jaeho/marvin/ros2_ws/install/marvin/share/marvin/meshes/stl/chain_link_grip_r.stl" scale="0.001 0.001 0.001"/>
       </geometry>
     </collision>
     <inertial>
@@ -318,13 +318,13 @@
     </inertial>
   </link>
   <!-- end effector joint -->
-  <joint name="left_end_effector_joint" type="fixed">
+  <joint name="end_effector_joint_left" type="fixed">
     <origin rpy="0 0 0" xyz="0.126 0.0 0.0"/>
-    <parent link="left_link5"/>
-    <child link="left_end_effector_link"/>
+    <parent link="link5_left"/>
+    <child link="end_effector_link_left"/>
   </joint>
   <!-- end effector link -->
-  <link name="left_end_effector_link">
+  <link name="end_effector_link_left">
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
@@ -340,18 +340,18 @@
   </link>
   <!-- Left Arm -->
   <!-- Link 1 -->
-  <link name="right_link1">
+  <link name="link1_right">
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://marvin/meshes/stl/chain_link1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="/home/jaeho/marvin/ros2_ws/install/marvin/share/marvin/meshes/stl/chain_link1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="grey"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://marvin/meshes/stl/chain_link1.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="/home/jaeho/marvin/ros2_ws/install/marvin/share/marvin/meshes/stl/chain_link1.stl" scale="0.001 0.001 0.001"/>
       </geometry>
     </collision>
     <inertial>
@@ -362,26 +362,26 @@
     <parent link="right_arm_joint"/>
   </link>
   <!-- Joint 1 -->
-  <joint name="right_joint1" type="revolute">
-    <parent link="right_link1"/>
-    <child link="right_link2"/>
+  <joint name="joint1_right" type="revolute">
+    <parent link="link1_right"/>
+    <child link="link2_right"/>
     <origin rpy="0 0 0" xyz="0.012 0.0 0.017"/>
     <axis xyz="0 0 1"/>
-    <limit effort="1" lower="-2.827433388230814" upper="2.827433388230814" velocity="4.8" acceleration="1.0"/>
+    <limit effort="1" lower="-2.827433388230814" upper="2.827433388230814" velocity="4.8"/>
   </joint>
   <!--  Link 2 -->
-  <link name="right_link2">
+  <link name="link2_right">
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0.019"/>
       <geometry>
-        <mesh filename="package://marvin/meshes/stl/chain_link2.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="/home/jaeho/marvin/ros2_ws/install/marvin/share/marvin/meshes/stl/chain_link2.stl" scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="grey"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0.019"/>
       <geometry>
-        <mesh filename="package://marvin/meshes/stl/chain_link2.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="/home/jaeho/marvin/ros2_ws/install/marvin/share/marvin/meshes/stl/chain_link2.stl" scale="0.001 0.001 0.001"/>
       </geometry>
     </collision>
     <inertial>
@@ -391,26 +391,26 @@
     </inertial>
   </link>
   <!--  Joint 2 -->
-  <joint name="right_joint2" type="revolute">
-    <parent link="right_link2"/>
-    <child link="right_link3"/>
+  <joint name="joint2_right" type="revolute">
+    <parent link="link2_right"/>
+    <child link="link3_right"/>
     <origin rpy="0 0 0" xyz="0.0 0.0 0.0595"/>
     <axis xyz="0 1 0"/>
-    <limit effort="1" lower="-1.790707812546182" upper="1.5707963267948966" velocity="4.8" acceleration="1.0"/>
+    <limit effort="1" lower="-1.790707812546182" upper="1.5707963267948966" velocity="4.8"/>
   </joint>
   <!--  Link 3 -->
-  <link name="right_link3">
+  <link name="link3_right">
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://marvin/meshes/stl/chain_link3.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="/home/jaeho/marvin/ros2_ws/install/marvin/share/marvin/meshes/stl/chain_link3.stl" scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="grey"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://marvin/meshes/stl/chain_link3.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="/home/jaeho/marvin/ros2_ws/install/marvin/share/marvin/meshes/stl/chain_link3.stl" scale="0.001 0.001 0.001"/>
       </geometry>
     </collision>
     <inertial>
@@ -420,26 +420,26 @@
     </inertial>
   </link>
   <!--  Joint 3 -->
-  <joint name="right_joint3" type="revolute">
-    <parent link="right_link3"/>
-    <child link="right_link4"/>
+  <joint name="joint3_right" type="revolute">
+    <parent link="link3_right"/>
+    <child link="link4_right"/>
     <origin rpy="0 0 0" xyz="0.024 0 0.128"/>
     <axis xyz="0 1 0"/>
-    <limit effort="1" lower="-0.9424777960769379" upper="1.382300767579509" velocity="4.8" acceleration="1.0"/>
+    <limit effort="1" lower="-0.9424777960769379" upper="1.382300767579509" velocity="4.8"/>
   </joint>
   <!--  Link 4 -->
-  <link name="right_link4">
+  <link name="link4_right">
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://marvin/meshes/stl/chain_link4.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="/home/jaeho/marvin/ros2_ws/install/marvin/share/marvin/meshes/stl/chain_link4.stl" scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="grey"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://marvin/meshes/stl/chain_link4.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="/home/jaeho/marvin/ros2_ws/install/marvin/share/marvin/meshes/stl/chain_link4.stl" scale="0.001 0.001 0.001"/>
       </geometry>
     </collision>
     <inertial>
@@ -449,26 +449,26 @@
     </inertial>
   </link>
   <!--  Joint 4 -->
-  <joint name="right_joint4" type="revolute">
-    <parent link="right_link4"/>
-    <child link="right_link5"/>
+  <joint name="joint4_right" type="revolute">
+    <parent link="link4_right"/>
+    <child link="link5_right"/>
     <origin rpy="0 0 0" xyz="0.124 0.0 0.0"/>
     <axis xyz="0 1 0"/>
-    <limit effort="1" lower="-1.790707812546182" upper="2.0420352248333655" velocity="4.8" acceleration="1.0"/>
+    <limit effort="1" lower="-1.790707812546182" upper="2.0420352248333655" velocity="4.8"/>
   </joint>
   <!--  Link 5 -->
-  <link name="right_link5">
+  <link name="link5_right">
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://marvin/meshes/stl/chain_link5.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="/home/jaeho/marvin/ros2_ws/install/marvin/share/marvin/meshes/stl/chain_link5.stl" scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="grey"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
-        <mesh filename="package://marvin/meshes/stl/chain_link5.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="/home/jaeho/marvin/ros2_ws/install/marvin/share/marvin/meshes/stl/chain_link5.stl" scale="0.001 0.001 0.001"/>
       </geometry>
     </collision>
     <inertial>
@@ -478,26 +478,26 @@
     </inertial>
   </link>
   <!--  Gripper joint -->
-  <joint name="right_gripper" type="prismatic">
-    <parent link="right_link5"/>
-    <child link="right_gripper_link"/>
+  <joint name="gripper_right" type="prismatic">
+    <parent link="link5_right"/>
+    <child link="gripper_link_right"/>
     <origin rpy="0 0 0" xyz="0.0817 0.021 0.0"/>
     <axis xyz="0 1 0"/>
-    <limit effort="1" lower="-0.010" upper="0.019" velocity="4.8" acceleration="1.0"/>
+    <limit effort="1" lower="-0.010" upper="0.019" velocity="4.8"/>
   </joint>
   <!--  Gripper link -->
-  <link name="right_gripper_link">
+  <link name="gripper_link_right">
     <visual>
       <origin rpy="0 0 0" xyz="0.0 0.0 0"/>
       <geometry>
-        <mesh filename="package://marvin/meshes/stl/chain_link_grip_l.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="/home/jaeho/marvin/ros2_ws/install/marvin/share/marvin/meshes/stl/chain_link_grip_l.stl" scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="grey"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0.0 0.0 0"/>
       <geometry>
-        <mesh filename="package://marvin/meshes/stl/chain_link_grip_l.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="/home/jaeho/marvin/ros2_ws/install/marvin/share/marvin/meshes/stl/chain_link_grip_l.stl" scale="0.001 0.001 0.001"/>
       </geometry>
     </collision>
     <inertial>
@@ -507,27 +507,27 @@
     </inertial>
   </link>
   <!--  Gripper joint sub -->
-  <joint name="right_gripper_sub" type="prismatic">
-    <parent link="right_link5"/>
-    <child link="right_gripper_link_sub"/>
+  <joint name="gripper_sub_right" type="prismatic">
+    <parent link="link5_right"/>
+    <child link="gripper_link_sub_right"/>
     <origin rpy="0 0 0" xyz="0.0817 -0.021 0"/>
     <axis xyz="0 -1 0"/>
-    <limit effort="1" lower="-0.010" upper="0.019" velocity="4.8" acceleration="1.0"/>
-    <mimic joint="right_gripper" multiplier="1"/>
+    <limit effort="1" lower="-0.010" upper="0.019" velocity="4.8"/>
+    <mimic joint="gripper_right" multiplier="1"/>
   </joint>
   <!--  Gripper link sub -->
-  <link name="right_gripper_link_sub">
+  <link name="gripper_link_sub_right">
     <visual>
       <origin rpy="0 0 0" xyz="0.0 -0.0 0"/>
       <geometry>
-        <mesh filename="package://marvin/meshes/stl/chain_link_grip_r.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="/home/jaeho/marvin/ros2_ws/install/marvin/share/marvin/meshes/stl/chain_link_grip_r.stl" scale="0.001 0.001 0.001"/>
       </geometry>
       <material name="grey"/>
     </visual>
     <collision>
       <origin rpy="0 0 0" xyz="0.0 -0.0 0"/>
       <geometry>
-        <mesh filename="package://marvin/meshes/stl/chain_link_grip_r.stl" scale="0.001 0.001 0.001"/>
+        <mesh filename="/home/jaeho/marvin/ros2_ws/install/marvin/share/marvin/meshes/stl/chain_link_grip_r.stl" scale="0.001 0.001 0.001"/>
       </geometry>
     </collision>
     <inertial>
@@ -537,13 +537,13 @@
     </inertial>
   </link>
   <!-- end effector joint -->
-  <joint name="right_end_effector_joint" type="fixed">
+  <joint name="end_effector_joint_right" type="fixed">
     <origin rpy="0 0 0" xyz="0.126 0.0 0.0"/>
-    <parent link="right_link5"/>
-    <child link="right_end_effector_link"/>
+    <parent link="link5_right"/>
+    <child link="end_effector_link_right"/>
   </joint>
   <!-- end effector link -->
-  <link name="right_end_effector_link">
+  <link name="end_effector_link_right">
     <visual>
       <origin rpy="0 0 0" xyz="0 0 0"/>
       <geometry>
