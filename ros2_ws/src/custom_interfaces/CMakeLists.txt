@@ -28,11 +28,8 @@ find_package(rosidl_default_generators REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/PoseLandmark.msg"
-  DEPENDENCIES geometry_msgs # Add packages that above messages depend on, in this case geometry_msgs for point
-)
-
-rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/HandLandmark.msg"
+  DEPENDENCIES geometry_msgs # Add packages that above messages depend on, in this case geometry_msgs for point
 )
 
 ament_package()
