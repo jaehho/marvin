@@ -1,6 +1,5 @@
-<!-- Copied and modified from OMX -->
-
 <?xml version="1.0"?>
+<!-- Copied and modified from OMX -->
 <!-- Marvin Chain -->
 <robot name="marvin" xmlns:xacro="http://ros.org/wiki/xacro">
   <xacro:arg name="prefix" default="" />

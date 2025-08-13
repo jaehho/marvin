@@ -54,7 +54,7 @@ left_hand_controller:
 
 right_hand_controller:
   ros__parameters:
-    joint: left_gripper
+    joint: right_gripper
     state_interfaces:
       - position
     command_interfaces:
