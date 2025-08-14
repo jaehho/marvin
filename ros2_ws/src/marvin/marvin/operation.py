@@ -21,10 +21,11 @@ CLOSED_POSITION = -0.01  # Closed gripper position
 ARM_JOINT_TOPIC             = '/servo_node/delta_joint_cmds'
 INTERMEDIATE_JOINT_TOPIC    = '/intermediate_joint_cmds'
 INTERMEDIATE_HAND_TOPIC     = '/hand_landmarks'
-GRIPPER_ACTION              = 'right_gripper_controller/gripper_cmd'
+RIGHT_GRIPPER_ACTION        = 'right_hand_controller/gripper_cmd'
+LEFT_GRIPPER_ACTION         = 'left_hand_controller/gripper_cmd'
 START_SERVO_SRV             = '/servo_node/start_servo'
 STOP_SERVO_SRV              = '/servo_node/stop_servo'
-BASE_FRAME_ID               = 'right_link1'
+BASE_FRAME_ID               = 'torso'
 PUBLISH_RATE_HZ             = 100
 
 
@@ -48,8 +49,11 @@ class TeleopNode(Node):
             self.hand_cb, 10
         )
 
-        # Gripper action client
-        self.gripper_ac = ActionClient(self, GripperCommand, GRIPPER_ACTION)
+        # Left gripper action client
+        self.left_gripper_ac = ActionClient(self, GripperCommand, LEFT_GRIPPER_ACTION)
+
+        # Right gripper action client
+        self.right_gripper_ac = ActionClient(self, GripperCommand, RIGHT_GRIPPER_ACTION)
 
         # Service clients for start/stop servo
         self.start_cli = self.create_client(Trigger, START_SERVO_SRV)
@@ -98,13 +102,17 @@ class TeleopNode(Node):
         self.get_logger().info(f'Forwarded external JointJog: {msg.joint_names}')
 
 
-    def send_gripper_goal(self, position: float):
+    def send_gripper_goal(self, side: str, position: float):
         goal = GripperCommand.Goal()
         goal.command.position   = position
         goal.command.max_effort = 100.0
-        self.get_logger().info(f'Sending gripper goal: {position:.3f}')
-        self.gripper_ac.wait_for_server()
-        self.gripper_ac.send_goal_async(goal)
+        self.get_logger().info(f'Sending {side} gripper goal: {position:.3f}')
+        if side == 'left':
+            self.left_gripper_ac.wait_for_server()
+            self.left_gripper_ac.send_goal_async(goal)
+        elif side == 'right':
+            self.right_gripper_ac.wait_for_server()
+            self.right_gripper_ac.send_goal_async(goal)
 
 
     def hand_cb(self, msg: HandLandmark):
@@ -115,11 +123,12 @@ class TeleopNode(Node):
         for hand_label, is_open in zip(msg.label, msg.status):
             if hand_label == 'left_hand':
                 target = OPEN_POSITION  if is_open else CLOSED_POSITION
-                self.send_gripper_goal(target)
+                self.send_gripper_goal(target, 'left')
                 self.get_logger().info(f"Left hand is {'open' if is_open else 'closed'}, sending gripper command: {target:.3f}")
             elif hand_label == 'right_hand':
-                # for now, ignore right hand
-                pass
+                target = OPEN_POSITION  if is_open else CLOSED_POSITION
+                self.send_gripper_goal(target, 'right')
+                self.get_logger().info(f"Right hand is {'open' if is_open else 'closed'}, sending gripper command: {target:.3f}")
     
 
     def destroy_node(self):

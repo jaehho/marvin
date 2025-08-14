@@ -3,6 +3,7 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import JointState
 from control_msgs.msg import JointJog
+from builtin_interfaces.msg import Duration
 
 class JointErrorToVelocityPublisher(Node):
     """
@@ -63,8 +64,8 @@ class JointErrorToVelocityPublisher(Node):
                 velocity = np.clip(self.gain * error, -self.velocity_limit, self.velocity_limit)
                 joint_errors[joint_name] = error
                 joint_velocities[joint_name] = velocity
-                # want abduction specifically to have higher gain
-                if 'shoulder_adduction' in joint_name:
+                # want adduction (joint 2) specifically to have higher gain
+                if joint_name in ('left_joint2', 'right_joint2'):
                     joint_velocities[joint_name] *= 2.0
             else:
                 self.get_logger().warn(f"Joint '{joint_name}' not found in actual joint states.")
@@ -79,7 +80,7 @@ class JointErrorToVelocityPublisher(Node):
         jog_msg.header.stamp = self.get_clock().now().to_msg()
         jog_msg.joint_names = list(joint_velocities.keys())
         jog_msg.velocities = list(joint_velocities.values())
-        jog_msg.duration = 0.1 #This is optional, but can be used to set the duration of the jog command
+        jog_msg.duration = Duration(sec=0, nanosec=100_000_000) #This is optional, but can be used to set the duration of the jog command
 
         self.joint_velocity_publisher.publish(jog_msg)
 

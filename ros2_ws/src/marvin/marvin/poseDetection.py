@@ -28,7 +28,6 @@ class PoseDetectionPublisher(Node):
         
         self.drawing_utils = mp.solutions.drawing_utils
 
-
     def run_pose_detection(self):
         cap = cv2.VideoCapture(0)
         if not cap.isOpened():
@@ -67,6 +66,12 @@ class PoseDetectionPublisher(Node):
             for hand_landmarks, handedness in zip(hands_results.multi_hand_landmarks, hands_results.multi_handedness):
                 # handedness.classification[0].label is "Left" or "Right"
                 hand_label = handedness.classification[0].label.lower() + '_hand'
+                #flip to mirror
+                if hand_label == 'left_hand':
+                    hand_label ='right_hand'
+                elif hand_label == 'right_hand':
+                    hand_label = 'left_hand'
+
                 hand_status = self.return_hand_status(hand_landmarks)
 
                 hand_msg.label.append(hand_label)
