@@ -123,11 +123,11 @@ class TeleopNode(Node):
         for hand_label, is_open in zip(msg.label, msg.status):
             if hand_label == 'left_hand':
                 target = OPEN_POSITION  if is_open else CLOSED_POSITION
-                self.send_gripper_goal(target, 'left')
+                self.send_gripper_goal('left', target)
                 self.get_logger().info(f"Left hand is {'open' if is_open else 'closed'}, sending gripper command: {target:.3f}")
             elif hand_label == 'right_hand':
                 target = OPEN_POSITION  if is_open else CLOSED_POSITION
-                self.send_gripper_goal(target, 'right')
+                self.send_gripper_goal('right', target)
                 self.get_logger().info(f"Right hand is {'open' if is_open else 'closed'}, sending gripper command: {target:.3f}")
     
 

@@ -3,7 +3,6 @@ import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import JointState
 from control_msgs.msg import JointJog
-from builtin_interfaces.msg import Duration
 
 class JointErrorToVelocityPublisher(Node):
     """
@@ -80,7 +79,7 @@ class JointErrorToVelocityPublisher(Node):
         jog_msg.header.stamp = self.get_clock().now().to_msg()
         jog_msg.joint_names = list(joint_velocities.keys())
         jog_msg.velocities = list(joint_velocities.values())
-        jog_msg.duration = Duration(sec=0, nanosec=100_000_000) #This is optional, but can be used to set the duration of the jog command
+        jog_msg.duration = 0.1 #This is optional, but can be used to set the duration of the jog command
 
         self.joint_velocity_publisher.publish(jog_msg)
 

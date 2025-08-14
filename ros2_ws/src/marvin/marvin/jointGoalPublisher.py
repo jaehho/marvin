@@ -140,7 +140,7 @@ class JointGoalPublisher(Node):
         msg.position = left_positions + right_positions
         msg.velocity = []
         msg.effort = []
-        self.joint_goal_pub.publish(msg)
+        self.joint_goal_publisher.publish(msg)
 
 def main(args=None):
     rclpy.init(args=args)
