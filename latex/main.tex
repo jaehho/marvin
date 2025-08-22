@@ -44,6 +44,7 @@
 %% for your publication.
 %%
 %%
+
 \documentclass[sigconf]{acmart}
 %%
 %% \BibTeX command to typeset BibTeX logo in the docs
@@ -245,7 +246,67 @@ this project, we utilized two arms, connected to a central "torso" built
 from aluminum beams.
 Dynamixel U2D2 power hub.
 
+The joints are defined as follows:
+
+
 \section{Software}
+
+\subsection{Pose Detection}
+The OpenCV pose detection library was utilized in order to detect the human
+body and its joints via a webcam. This library is based on the MediaPipe
+framework, which uses machine learning to detect and track human body.
+Utilizing OpenCV's output of relative joint positions in the 3D space,
+we were able to compute the relevant joint angles for MARVIN's arms.
+Say what joints we chose and how they mapped to each of Marvin's joints.
+
+From OpenCV's available pose landmarks, we selected the left and right
+shoulders (11, 12), elbows (13, 14), and wrists (15, 16), as well as
+the hips (23, 24) in order to calculate the joint angles.
+
+\subsubsection{Shoulder adduction}
+We calculate the shoulder adduction by projecting the upper arm vector
+onto the plane defined by the orthogonal hip-to-hip vector, and then measuring the angle between the original vector and 
+its projection. This quantifies how much the arm is raised to the 
+side of the torso's midline plane.
+
+Let $S$ (shoulder), $E$ (elbow), $H_L$ (left hip), $H_R$ (right hip). Define
+\[
+  \mathbf{u}=E-S,\qquad
+  \mathbf{h}=\begin{cases}
+    H_R-H_L,&\text{left side},\\
+    H_L-H_R,&\text{right side},
+  \end{cases} \qquad
+  \hat{\mathbf{n}}=\dfrac{\mathbf{h}}{\|\mathbf{h}\|}
+\]
+Project \(\mathbf{u}\) onto the sagittal plane (orthogonal to \(\hat{\mathbf{n}}\)):
+\[
+\mathbf{u}_\pi=\mathbf{u}-(\mathbf{u}\!\cdot\!\hat{\mathbf{n}})\,\hat{\mathbf{n}}.
+\]
+The shoulder adduction angle is then calculated:
+\[
+\alpha=\arccos \left( \frac{\mathbf{u} \cdot \mathbf{u_\pi}}{\|\mathbf{u}\| \|\mathbf{u_\pi}\|} \right)
+\]
+
+\subsubsection{Shoulder flexion}
+We calculate the shoulder flexion by
+
+
+
+
+
+
+\subsubsection{Hand Open/Close}
+For the purposes of gripper mimicking, we also utilized an instance of 
+OpenCV's hand detection model in order to detect and track the landmarks
+of two human hands in frame. Utilizing the wrist (index 0) and the MCP joint 
+of the middle finger (this is the first knuckle on the palm, and denoted by 
+index 9), we calculated the reference length. Then, we used the distance froom the wrist to the tips of the other 
+five fingers (with indices 4, 8, 12, 16, 20) to decide that the hand
+was considered "open" if less than 3 fingertips were closer to the
+wrist than the reference length.
+
+
+\subsection{Control}
 MARVIN is built utilizing the Robotic Operating System 2 (ROS2) framework
 with the Humble distribution. The software is written in Python and C++,
 and utilizes/modifies portions of the OpenManipulator-X ROS2 package. For
@@ -258,6 +319,8 @@ of the robot, as well as its inertial and controller properties.
 To utilize the Moveit! and ROS2 control frameworks with the Dynamixel servos,
 we defined the robot's kinematic and dynamic properties, as well as the 
 servo gains. This was done for the simulated version of MARVIN, as well as the
+
+Moveit! realtime servoing. KDL kinematic plugin. 
 
 \section{Website}
 
