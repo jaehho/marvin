@@ -221,22 +221,14 @@ Tangible, Embedded, and Embodied Interaction}
 \maketitle
 
 \section{Introduction}
-ACM's consolidated article template, introduced in 2017, provides a
-consistent \LaTeX\ style for use across ACM publications, and
-incorporates accessibility and metadata-extraction functionality
-necessary for future Digital Library endeavors. Numerous ACM and
-SIG-specific \LaTeX\ templates have been examined, and their unique
-features incorporated into this single new template.
+MARVIN is a teleoperational robot that mimics the upper body movements
+of a human operator in real time. Operation can be done via a local webcam,
+as well as over a remote connection. For the latter form of operation,
+the user utilizes a web aopplication that utilizes their webcam stream
+for motion-capturing and mimicking, providing the ability for MARVIN to act 
+as a physical avatar for the user across distances.
 
-If you are new to publishing with ACM, this document is a valuable
-guide to the process of preparing your work for publication. If you
-have published with ACM before, this document provides insight and
-instruction into more recent changes to the article template.
-
-The ``\verb|acmart|'' document class can be used to prepare articles
-for any ACM publication --- conference or journal, and for any stage
-of publication, from review to final ``camera-ready'' copy, to the
-author's own version, with {\itshape very} few changes to the source.
+blahblah usage. blah blah.
 
 \section{Hardware}
 MARVIN is built using open-sourced robotic software and hardware from 
@@ -263,32 +255,71 @@ From OpenCV's available pose landmarks, we selected the left and right
 shoulders (11, 12), elbows (13, 14), and wrists (15, 16), as well as
 the hips (23, 24) in order to calculate the joint angles.
 
+\subsubsection{Shoulder flexion}
+We calculate the shoulder flexion by projecting the upper arm vector onto
+the plane defined by the orthogonal hip-to-hip vector, as well as 
+projecting the shoulder-to-same-sided-hip vector onto the same hip-hip plane.
+Then, the flexion angle is calculated as the angle between these two 
+projections. This quantifies how much the arm is raised in front 
+(and parallel) to the torso's midline plane.
+
+\noindent Let $S$ (shoulder), $E$ (elbow), $H$ (same-sided-hip), $H_{opp}$ (opposite side hip). Define
+\begin{displaymath}
+  \mathbf{u}=E-S, \qquad 
+  \mathbf{v}=H-S, \qquad 
+  \mathbf{h}=H_{opp}-H, \qquad
+  \hat{\mathbf{n}}=\dfrac{\mathbf{h}}{\|\mathbf{h}\|}
+\end{displaymath}
+We project both $\mathbf{u}$ and $\mathbf{v}$ onto the midline plane (orthogonal to $\hat{\mathbf{n}}$):
+\begin{displaymath}
+\mathbf{u}_\pi=\mathbf{u}-(\mathbf{u}\!\cdot\!\hat{\mathbf{n}})\,\hat{\mathbf{n}}, \qquad
+\mathbf{v}_\pi=\mathbf{v}-(\mathbf{v}\!\cdot\!\hat{\mathbf{n}})\,\hat{\mathbf{n}}
+\end{displaymath}
+The shoulder flexion angle is then calculated:
+\begin{equation}
+\alpha=\arccos \left( \frac{\mathbf{u_\pi} \cdot \mathbf{v_\pi}}{\|\mathbf{u_\pi}\| \|\mathbf{v_\pi}\|} \right)
+\end{equation}
+This angle is later mapped to joint 1 on Marvin.
+
 \subsubsection{Shoulder adduction}
 We calculate the shoulder adduction by projecting the upper arm vector
-onto the plane defined by the orthogonal hip-to-hip vector, and then measuring the angle between the original vector and 
-its projection. This quantifies how much the arm is raised to the 
-side of the torso's midline plane.
+onto the plane defined by the orthogonal hip-to-hip vector, and then 
+measuring the angle between the original vector and its projection. 
+This quantifies how much the arm is raised to the side (orthogonal) 
+to the torso's midline plane.
 
-Let $S$ (shoulder), $E$ (elbow), $H_L$ (left hip), $H_R$ (right hip). Define
-\[
-  \mathbf{u}=E-S,\qquad
-  \mathbf{h}=\begin{cases}
-    H_R-H_L,&\text{left side},\\
-    H_L-H_R,&\text{right side},
-  \end{cases} \qquad
+\noindent Let $S$ (shoulder), $E$ (elbow), $H$ (same-sided-hip), $H_{opp}$ (opposite side hip). Define
+\begin{displaymath}
+  \mathbf{u}=E-S, \qquad 
+  \mathbf{h}=H_{opp}-H, \qquad
   \hat{\mathbf{n}}=\dfrac{\mathbf{h}}{\|\mathbf{h}\|}
-\]
-Project \(\mathbf{u}\) onto the sagittal plane (orthogonal to \(\hat{\mathbf{n}}\)):
-\[
+\end{displaymath}
+Project $\mathbf{u}$ onto the midline plane (orthogonal to $\hat{\mathbf{n}}$):
+\begin{displaymath}
 \mathbf{u}_\pi=\mathbf{u}-(\mathbf{u}\!\cdot\!\hat{\mathbf{n}})\,\hat{\mathbf{n}}.
-\]
+\end{displaymath}
 The shoulder adduction angle is then calculated:
-\[
-\alpha=\arccos \left( \frac{\mathbf{u} \cdot \mathbf{u_\pi}}{\|\mathbf{u}\| \|\mathbf{u_\pi}\|} \right)
-\]
+\begin{equation}
+\beta=\arccos \left( \frac{\mathbf{u} \cdot \mathbf{u_\pi}}{\|\mathbf{u}\| \|\mathbf{u_\pi}\|} \right)
+\end{equation}
+The shoulder adduction angle is later mapped to joint 2.
 
-\subsubsection{Shoulder flexion}
-We calculate the shoulder flexion by
+\subsubsection{Elbow flexion}
+Elbow flexion is calculated as the angle between the upper arm vector and
+the forearm vector. This quantifies how much the elbow is bent within
+its own plane of motion.
+
+\noindent Let $S$ (shoulder), $E$ (elbow), $W$ (wrist). Define
+\begin{displaymath}
+  \mathbf{u}=E-S, \qquad 
+  \mathbf{f}=E-W, \qquad
+\end{displaymath}
+The elbow flexion angle is then calculated:
+\begin{equation}
+\theta=\arccos \left( \frac{\mathbf{u} \cdot \mathbf{f}}{\|\mathbf{u}\| \|\mathbf{f}\|} \right)
+\end{equation}
+This elbow flexion angle is then mapped to joint 3.
+
 
 
 
