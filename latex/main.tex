@@ -353,7 +353,20 @@ servo gains. This was done for the simulated version of MARVIN, as well as the
 
 Moveit! realtime servoing. KDL kinematic plugin. 
 
+Utilizing MoveIt!'s realtime servoing package, we were able to define two
+kinematic chains and corresponding servoing nodes, one for each of MARVIN's 
+arms. Each of these nodes subscribes to a topic that receives the desired
+velocity, which is computed utilizing the difference between the current 
+detected joint angle (the "desired" angle) and the current angle (received
+via sensor feedback which publishes to the JointState message topic). Then,
+these differences are multiplied by a gain and sent as a velocity command
+as a JointJog-type servoing message.
+
 \section{Website}
+
+\section{Operation and User Study}
+MARVIN was tested in both local and remote operation scenarios utilizing
+volunteers from the Cooper Union community. 
 
 \section{Template Overview}
 As noted in the introduction, the ``\verb|acmart|'' document class can
