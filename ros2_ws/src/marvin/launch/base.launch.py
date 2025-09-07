@@ -178,10 +178,17 @@ def generate_launch_description():
         output='screen',
     )
 
-    marvin_controller_spawner = Node(
+    left_arm_controller_spawner = Node(
         package='controller_manager',
         executable='spawner',
-        arguments=['marvin_controller'],
+        arguments=['left_arm_controller'],
+        output='screen',
+    )
+
+    right_arm_controller_spawner = Node(
+        package='controller_manager',
+        executable='spawner',
+        arguments=['right_arm_controller'],
         output='screen',
     )
 
@@ -206,13 +213,22 @@ def generate_launch_description():
         )
     )
 
-    delay_marvin_controller_spawner_after_joint_state_broadcaster_spawner = \
+    delay_left_arm_controller_spawner_after_joint_state_broadcaster_spawner = \
         RegisterEventHandler(
             event_handler=OnProcessExit(
                 target_action=joint_state_broadcaster_spawner,
-                on_exit=[marvin_controller_spawner],
+                on_exit=[left_arm_controller_spawner],
             )
         )
+    
+    delay_right_arm_controller_spawner_after_joint_state_broadcaster_spawner = \
+        RegisterEventHandler(
+            event_handler=OnProcessExit(
+                target_action=joint_state_broadcaster_spawner,
+                on_exit=[right_arm_controller_spawner],
+            )
+        )
+      
 
     delay_left_hand_controller_spawner_after_joint_state_broadcaster_spawner = \
         RegisterEventHandler(
@@ -235,7 +251,8 @@ def generate_launch_description():
         robot_state_pub_node,
         joint_state_broadcaster_spawner,
         delay_rviz_after_joint_state_broadcaster_spawner,
-        delay_marvin_controller_spawner_after_joint_state_broadcaster_spawner,
+        delay_left_arm_controller_spawner_after_joint_state_broadcaster_spawner,
+        delay_right_arm_controller_spawner_after_joint_state_broadcaster_spawner,
         delay_left_hand_controller_spawner_after_joint_state_broadcaster_spawner,
         delay_right_hand_controller_spawner_after_joint_state_broadcaster_spawner,
     ]

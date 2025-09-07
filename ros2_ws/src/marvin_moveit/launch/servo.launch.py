@@ -73,29 +73,54 @@ def generate_launch_description():
         kinematics_yaml = yaml.safe_load(file)
 
     # Get parameters for the Servo node
-    servo_yaml_path = os.path.join(
+    left_servo_yaml_path = os.path.join(
         get_package_share_directory("marvin_moveit"),
         "config",
-        "moveit_servo.yaml",
+        "moveit_servo_left.yaml",
     )
     try:
-        with open(servo_yaml_path, "r") as file:
-            servo_params = {"moveit_servo": yaml.safe_load(file)}
+        with open(left_servo_yaml_path, "r") as file:
+            left_servo_params = {"moveit_servo": yaml.safe_load(file)}
+    except EnvironmentError:  # parent of IOError, OSError *and* WindowsError where available
+        return None
+    
+    right_servo_yaml_path = os.path.join(
+        get_package_share_directory("marvin_moveit"),
+        "config",
+        "moveit_servo_right.yaml",
+    )
+    try:
+        with open(right_servo_yaml_path, "r") as file:
+            right_servo_params = {"moveit_servo": yaml.safe_load(file)}
     except EnvironmentError:  # parent of IOError, OSError *and* WindowsError where available
         return None
 
+
     # Launch as much as possible in components
-    servo_node = Node(
+    left_servo_node = Node(
         package="moveit_servo",
         executable="servo_node_main",
         parameters=[
             {'use_gazebo':use_sim},
-            servo_params,
+            left_servo_params,
             robot_description,
             robot_description_semantic,
             kinematics_yaml,
         ]
     )
-    ld.add_action(servo_node)
+    right_servo_node = Node(
+        package="moveit_servo",
+        executable="servo_node_main",
+        parameters=[
+            {'use_gazebo':use_sim},
+            right_servo_params,
+            robot_description,
+            robot_description_semantic,
+            kinematics_yaml,
+        ]
+    )
+    ld.add_action(left_servo_node)
+    ld.add_action(right_servo_node)
+
 
     return ld

@@ -18,13 +18,16 @@ from custom_interfaces.msg import HandLandmark
 OPEN_POSITION  = 0.019  # Open gripper position
 CLOSED_POSITION = -0.01  # Closed gripper position
 
-ARM_JOINT_TOPIC             = '/servo_node/delta_joint_cmds'
+LEFT_ARM_JOINT_TOPIC        = '/left_servo_node/delta_joint_cmds'
+RIGHT_ARM_JOINT_TOPIC       = '/right_servo_node/delta_joint_cmds'
 INTERMEDIATE_JOINT_TOPIC    = '/intermediate_joint_cmds'
 INTERMEDIATE_HAND_TOPIC     = '/hand_landmarks'
 RIGHT_GRIPPER_ACTION        = '/right_hand_controller/gripper_cmd'
 LEFT_GRIPPER_ACTION         = '/left_hand_controller/gripper_cmd'
-START_SERVO_SRV             = '/servo_node/start_servo'
-STOP_SERVO_SRV              = '/servo_node/stop_servo'
+LEFT_START_SERVO_SRV        = '/left_servo_node/start_servo'
+LEFT_STOP_SERVO_SRV         = '/left_servo_node/stop_servo'
+RIGHT_START_SERVO_SRV       = '/right_servo_node/start_servo'
+RIGHT_STOP_SERVO_SRV        = '/right_servo_node/stop_servo'
 BASE_FRAME_ID               = 'torso'
 PUBLISH_RATE_HZ             = 100
 
@@ -35,7 +38,8 @@ class TeleopNode(Node):
         super().__init__('open_manipulator_x_teleop')
 
         # Publisher for MoveIt Servo
-        self.joint_pub = self.create_publisher(JointJog, ARM_JOINT_TOPIC, 10)
+        self.left_joint_pub = self.create_publisher(JointJog, LEFT_ARM_JOINT_TOPIC, 10)
+        self.right_joint_pub = self.create_publisher(JointJog, RIGHT_ARM_JOINT_TOPIC, 10)
 
         # Subscriber for external JointJog
         self.create_subscription(
@@ -56,16 +60,21 @@ class TeleopNode(Node):
         self.right_gripper_ac = ActionClient(self, GripperCommand, RIGHT_GRIPPER_ACTION)
 
         # Service clients for start/stop servo
-        self.start_cli = self.create_client(Trigger, START_SERVO_SRV)
-        self.stop_cli  = self.create_client(Trigger, STOP_SERVO_SRV)
+        self.left_start_cli = self.create_client(Trigger, LEFT_START_SERVO_SRV)
+        self.left_stop_cli  = self.create_client(Trigger, LEFT_STOP_SERVO_SRV)
+        self.right_start_cli = self.create_client(Trigger, RIGHT_START_SERVO_SRV)
+        self.right_stop_cli  = self.create_client(Trigger, RIGHT_STOP_SERVO_SRV)
 
         # Spin in background to service callbacks
         threading.Thread(target=self._spin_loop, daemon=True).start()
 
         # Wait/connect to MoveIt Servo services
-        self._wait_srv(self.start_cli, 'start_servo')
-        self._wait_srv(self.stop_cli,  'stop_servo')
-        self._call_trigger(self.start_cli, 'start')
+        self._wait_srv(self.left_start_cli, 'left_start_servo')
+        self._wait_srv(self.left_stop_cli,  'left_stop_servo')
+        self._call_trigger(self.left_start_cli, 'left_start')
+        self._wait_srv(self.right_start_cli, 'right_start_servo')
+        self._wait_srv(self.right_stop_cli,  'right_stop_servo')
+        self._call_trigger(self.right_start_cli, 'right_start')
 
 
     def _spin_loop(self):
@@ -93,12 +102,25 @@ class TeleopNode(Node):
 
     def external_joint_cb(self, msg: JointJog):
         # Stamp and forward to servo
-        out = JointJog()
-        out.header.stamp = self.get_clock().now().to_msg()
-        out.header.frame_id = BASE_FRAME_ID #pretty sure this is actually left/right_link1 so idk if need to add side to name
-        out.joint_names = msg.joint_names
-        out.velocities  = msg.velocities
-        self.joint_pub.publish(out)
+        names = msg.joint_names
+        velocities = msg.velocities
+        out_left = JointJog()
+        out_right = JointJog()
+        out_left.header.stamp = self.get_clock().now().to_msg()
+        out_right.header.stamp = self.get_clock().now().to_msg()
+        out_left.header.frame_id = BASE_FRAME_ID #pretty sure this is actually left/right_link1 so idk if need to add side to name
+        out_right.header.frame_id = BASE_FRAME_ID
+        for name, vel in zip(names, velocities):
+            if name.startswith('left_'):
+                out_left.velocities.append(vel)
+                out_left.joint_names.append(name)
+            elif name.startswith('right_'):
+                out_right.velocities.append(vel)
+                out_right.joint_names.append(name)
+            else:
+                self.get_logger().warn(f'Ignoring joint "{name}" not starting with "left_" or "right_"')
+        self.left_joint_pub.publish(out_left)
+        self.right_joint_pub.publish(out_right)
         self.get_logger().info(f'Forwarded external JointJog: {msg.joint_names}')
 
 
