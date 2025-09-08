@@ -29,8 +29,8 @@ def generate_launch_description():
     prefix = LaunchConfiguration('prefix')
     use_fake_hardware = LaunchConfiguration('use_fake_hardware')
     use_sim = LaunchConfiguration('use_sim')
-    left_port_name = LaunchConfiguration('left_port_name')
-    right_port_name = LaunchConfiguration('right_port_name')
+    port_name_left = LaunchConfiguration('port_name_left')
+    port_name_right = LaunchConfiguration('port_name_right')
 
     return LaunchDescription([
         DeclareLaunchArgument(
@@ -54,12 +54,12 @@ def generate_launch_description():
             description='Start robot in Gazebo simulation.'),
 
         DeclareLaunchArgument(
-            'left_port_name',
+            'port_name_left',
             default_value='/dev/ttyUSB0',
             description='The port name to connect to left arm hardware.'),
 
         DeclareLaunchArgument(
-            'right_port_name',
+            'port_name_right',
             default_value='/dev/ttyUSB1',
             description='The port name to connect to right arm hardware.'),
 
@@ -70,8 +70,8 @@ def generate_launch_description():
                 'prefix': prefix,
                 'use_fake_hardware': use_fake_hardware,
                 'use_sim': use_sim,
-                'left_port_name': left_port_name,
-                'right_port_name': right_port_name,
+                'port_name_left': port_name_left,
+                'port_name_right': port_name_right,
             }.items(),
         ),
     ])
