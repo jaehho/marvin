@@ -18,16 +18,16 @@ from custom_interfaces.msg import HandLandmark
 OPEN_POSITION  = 0.019  # Open gripper position
 CLOSED_POSITION = -0.01  # Closed gripper position
 
-LEFT_ARM_JOINT_TOPIC        = '/left_servo_node/delta_joint_cmds'
-RIGHT_ARM_JOINT_TOPIC       = '/right_servo_node/delta_joint_cmds'
+LEFT_ARM_JOINT_TOPIC        = '/left/servo_node/delta_joint_cmds'
+RIGHT_ARM_JOINT_TOPIC       = '/right/servo_node/delta_joint_cmds'
 INTERMEDIATE_JOINT_TOPIC    = '/intermediate_joint_cmds'
 INTERMEDIATE_HAND_TOPIC     = '/hand_landmarks'
 RIGHT_GRIPPER_ACTION        = '/right_hand_controller/gripper_cmd'
 LEFT_GRIPPER_ACTION         = '/left_hand_controller/gripper_cmd'
-LEFT_START_SERVO_SRV        = '/left_servo_node/start_servo'
-LEFT_STOP_SERVO_SRV         = '/left_servo_node/stop_servo'
-RIGHT_START_SERVO_SRV       = '/right_servo_node/start_servo'
-RIGHT_STOP_SERVO_SRV        = '/right_servo_node/stop_servo'
+LEFT_START_SERVO_SRV        = '/left/servo_node/start_servo'
+LEFT_STOP_SERVO_SRV         = '/left/servo_node/stop_servo'
+RIGHT_START_SERVO_SRV       = '/right/servo_node/start_servo'
+RIGHT_STOP_SERVO_SRV        = '/right/servo_node/stop_servo'
 BASE_FRAME_ID               = 'torso'
 PUBLISH_RATE_HZ             = 100
 

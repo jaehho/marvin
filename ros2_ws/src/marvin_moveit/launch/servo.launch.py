@@ -1,21 +1,4 @@
 #!/usr/bin/env python3
-#
-# Copyright 2024 ROBOTIS CO., LTD.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-#
-# Author: Wonho Yoon, Sungho Woo
-
 import os
 import yaml
 from launch import LaunchDescription
@@ -25,19 +8,17 @@ from launch_ros.actions import Node
 from ament_index_python.packages import get_package_share_directory
 import xacro
 
-
 def generate_launch_description():
-
     ld = LaunchDescription()
 
+    # --- Args ---
     use_sim = LaunchConfiguration('use_sim')
-    declare_use_sim = DeclareLaunchArgument(
-        'use_sim',
-        default_value='true',
-        description='Start robot in Gazebo simulation.')
-    ld.add_action(declare_use_sim)
+    ld.add_action(DeclareLaunchArgument(
+        'use_sim', default_value='true',
+        description='Start robot in Gazebo simulation.'
+    ))
 
-    # Robot description
+    # --- Robot Description (URDF/Xacro) ---
     robot_description_config = xacro.process_file(
         os.path.join(
             get_package_share_directory("marvin"),
@@ -47,80 +28,85 @@ def generate_launch_description():
     )
     robot_description = {"robot_description": robot_description_config.toxml()}
 
-    # Robot description Semantic config
+    # --- SRDF ---
     robot_description_semantic_path = os.path.join(
         get_package_share_directory("marvin_moveit"),
         "config",
         "marvin.srdf",
     )
-    try:
-        with open(robot_description_semantic_path, "r") as file:
-            robot_description_semantic_config = file.read()
-    except EnvironmentError:  # parent of IOError, OSError *and* WindowsError where available
-        return None
+    with open(robot_description_semantic_path, "r") as f:
+        robot_description_semantic = {"robot_description_semantic": f.read()}
 
-    robot_description_semantic = {
-        "robot_description_semantic": robot_description_semantic_config
-    }
-
-        # kinematics yaml
+    # --- Kinematics YAML ---
     kinematics_yaml_path = os.path.join(
         get_package_share_directory("marvin_moveit"),
         "config",
         "kinematics.yaml",
     )
-    with open(kinematics_yaml_path, "r") as file:
-        kinematics_yaml = yaml.safe_load(file)
+    with open(kinematics_yaml_path, "r") as f:
+        kinematics_yaml = yaml.safe_load(f)
 
-    # Get parameters for the Servo node
+    # --- Servo YAMLs ---
     left_servo_yaml_path = os.path.join(
         get_package_share_directory("marvin_moveit"),
         "config",
         "moveit_servo_left.yaml",
     )
-    try:
-        with open(left_servo_yaml_path, "r") as file:
-            left_servo_params = {"moveit_servo": yaml.safe_load(file)}
-    except EnvironmentError:  # parent of IOError, OSError *and* WindowsError where available
-        return None
-    
+    with open(left_servo_yaml_path, "r") as f:
+        left_servo_params = {"moveit_servo": yaml.safe_load(f)}
+
     right_servo_yaml_path = os.path.join(
         get_package_share_directory("marvin_moveit"),
         "config",
         "moveit_servo_right.yaml",
     )
-    try:
-        with open(right_servo_yaml_path, "r") as file:
-            right_servo_params = {"moveit_servo": yaml.safe_load(file)}
-    except EnvironmentError:  # parent of IOError, OSError *and* WindowsError where available
-        return None
+    with open(right_servo_yaml_path, "r") as f:
+        right_servo_params = {"moveit_servo": yaml.safe_load(f)}
 
+    # --- PlanningSceneMonitor options (private topic) ---
+    # psm_params = {
+    #     "planning_scene_monitor_options": {
+    #         "name": "planning_scene_monitor",
+    #         "robot_description": "robot_description",
+    #         "joint_state_topic": "/joint_states",
+    #         "publish_planning_scene_topic": "~publish_planning_scene", # or /publish_planning_scene
+    #         "monitored_planning_scene_topic": "/planning_scene",
+    #     }
+    # }
 
-    # Launch as much as possible in components
+    # --- Nodes ---
     left_servo_node = Node(
         package="moveit_servo",
         executable="servo_node_main",
+        name="servo_node",
+        namespace="left",
         parameters=[
-            {'use_gazebo':use_sim},
+            {"use_gazebo": use_sim},
             left_servo_params,
             robot_description,
             robot_description_semantic,
             kinematics_yaml,
-        ]
+            #psm_params,
+        ],
+        output="screen",
     )
+
     right_servo_node = Node(
         package="moveit_servo",
         executable="servo_node_main",
+        name="servo_node",
+        namespace="right",
         parameters=[
-            {'use_gazebo':use_sim},
+            {"use_gazebo": use_sim},
             right_servo_params,
             robot_description,
             robot_description_semantic,
             kinematics_yaml,
-        ]
+            #psm_params,
+        ],
+        output="screen",
     )
+
     ld.add_action(left_servo_node)
     ld.add_action(right_servo_node)
-
-
     return ld
