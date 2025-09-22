@@ -1,16 +1,16 @@
 services:
   api:
     build: ./api
-    restart: unless-stopped
-    expose:
-      - "8000"
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8000/api/health"]
-      interval: 5m
-      timeout: 5s
-      retries: 5
+    expose: ["8000"]
     volumes:
       - appdata:/data
+      - ./api:/app   # for hot reload
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    command: uvicorn app:app --host 0.0.0.0 --port 8000 --reload # for dev
 
   cloudflared:
     image: cloudflare/cloudflared:latest
@@ -18,9 +18,11 @@ services:
       api:
         condition: service_healthy
     restart: unless-stopped
+    environment:
+      - TUNNEL_TRANSPORT_PROTOCOL=quic
+    command: tunnel --no-autoupdate run
     volumes:
       - ./cloudflared:/etc/cloudflared:rw
-    command: tunnel run
 
 volumes:
   appdata:

@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MediaPipe Pose Landmarker — Web App</title>
+  <style>
+    :root{--bg:#0b0f14;--panel:#111823;--ink:#d9e1ee;--muted:#8aa0b6;--accent:#5bbcff;--ok:#3bd671;--warn:#ffcc66;--err:#ff7a7a}
+    *{box-sizing:border-box}html,body{height:100%}body{margin:0;background:linear-gradient(180deg,#0b0f14,#0e141d);color:var(--ink);font:14px/1.4 system-ui,Segoe UI,Roboto,Helvetica,Arial}
+    .wrap{max-width:1200px;margin:0 auto;padding:20px}
+    header{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:12px}
+    h1{font-size:18px;margin:0;font-weight:600}
+    .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+    .chip{background:var(--panel);padding:8px 10px;border-radius:12px;display:flex;gap:8px;align-items:center;border:1px solid #1d2836}
+    .chip label{font-size:12px;color:var(--muted)}
+    select,input{background:transparent;color:var(--ink);border:1px solid #1d2a3e;border-radius:8px;padding:4px 6px}
+    .btn{cursor:pointer;background:var(--accent);border:0;color:#021d2b;padding:9px 12px;border-radius:10px;font-weight:600}
+    .btn.secondary{background:#192539;color:var(--ink);border:1px solid #23344b}
+    .btn:disabled{opacity:.5;cursor:not-allowed}
+    .stage{position:relative;background:#05080c;border:1px solid #142034;border-radius:16px;overflow:hidden}
+    video,canvas{display:block;width:100%;height:auto}
+    #overlay{position:absolute;left:0;top:0}
+    .hud{position:absolute;left:10px;bottom:10px;background:rgba(10,16,24,.6);backdrop-filter:blur(6px);padding:8px 10px;border-radius:10px;border:1px solid #1a2a41;color:var(--muted)}
+    .pill{padding:2px 8px;border-radius:999px;border:1px solid #234162;color:#aad3ff}
+    .row{display:flex;gap:8px;align-items:center}
+    .grid{display:grid;grid-template-columns:1fr;gap:12px}
+    @media(min-width:980px){.grid{grid-template-columns:7fr 4fr}}
+    fieldset{margin:0;border:1px solid #1d2a3e;border-radius:12px;padding:10px}
+    legend{color:var(--muted);padding:0 6px;font-size:12px}
+    .kv{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px}
+    .kv div:nth-child(odd){color:var(--muted)}
+    a{color:#9bd2ff}
+    details{background:#0c131d;border:1px solid #1b2940;border-radius:12px;padding:8px 10px}
+    .log{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;white-space:pre-wrap;background:#0a1018;border:1px solid #1a2942;border-radius:8px;padding:8px;color:#b9c7da;max-height:260px;overflow:auto}
+    .ok{color:var(--ok)}.warn{color:var(--warn)}.err{color:var(--err)}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>MediaPipe Pose Landmarker</h1>
+      <div class="row" id="statusRow">
+        <span class="pill" id="status">idle</span>
+      </div>
+    </header>
+
+    <div class="grid">
+      <div>
+        <div class="controls">
+          <button id="startBtn" class="btn">Start camera</button>
+          <button id="stopBtn" class="btn secondary" disabled>Stop</button>
+          <div class="chip"><label for="modelSel">model</label>
+            <select id="modelSel">
+              <option value="lite">lite (fast)</option>
+              <option value="full">full (balanced)</option>
+              <option value="heavy">heavy (max)</option>
+            </select>
+          </div>
+          <div class="chip"><label for="wsUrl">ws</label>
+            <input id="wsUrl" value="wss://api.jaehho.com/api/pose/v1/ws" style="width:280px" />
+          </div>
+          <div class="chip"><label for="wsEnable">stream</label>
+            <input id="wsEnable" type="checkbox" />
+          </div>
+        </div>
+
+        <div class="stage" style="margin-top:12px">
+          <video id="video" playsinline muted></video>
+          <canvas id="overlay"></canvas>
+          <div class="hud">
+            <div class="row" style="gap:12px">
+              <span>FPS: <strong id="fps">0</strong></span>
+              <span>Latency: <strong id="lat">0</strong> ms</span>
+              <span>WS: <strong id="wsState">off</strong></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <fieldset>
+          <legend>Pose data</legend>
+          <div class="kv" id="poseData">
+            <div>poses</div><div id="poseCount">0</div>
+            <div>left elbow</div><div id="leftElbow">-</div>
+            <div>right elbow</div><div id="rightElbow">-</div>
+            <div>z avg</div><div id="zAvg">-</div>
+          </div>
+        </fieldset>
+
+        <details style="margin-top:12px">
+          <summary>Diagnostics & tests</summary>
+          <div class="row" style="gap:8px;margin:8px 0">
+            <button id="testUrls" class="btn secondary">Check model URLs</button>
+            <button id="testPayloadLegacy" class="btn secondary">Test payload (legacy)</button>
+            <button id="testPayloadV2" class="btn secondary">Test payload (v2)</button>
+            <button id="testRate" class="btn secondary">Test rate control</button>
+            <button id="runAll" class="btn">Run all tests</button>
+          </div>
+          <div class="log" id="log"></div>
+        </details>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { FilesetResolver, PoseLandmarker, DrawingUtils } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest";
+
+    const ui = (id)=>document.getElementById(id);
+    const video = ui('video');
+    const overlay = ui('overlay');
+    const ctx = overlay.getContext('2d');
+    const startBtn = ui('startBtn');
+    const stopBtn = ui('stopBtn');
+    const modelSel = ui('modelSel');
+    const fpsEl = ui('fps');
+    const latEl = ui('lat');
+    const statusEl = ui('status');
+    const poseCountEl = ui('poseCount');
+    const leftElbowEl = ui('leftElbow');
+    const rightElbowEl = ui('rightElbow');
+    const zAvgEl = ui('zAvg');
+    const wsUrlEl = ui('wsUrl');
+    const wsEnableEl = ui('wsEnable');
+    const wsStateEl = ui('wsState');
+    const logEl = ui('log');
+
+    let landmarker = null;
+    let stream = null;
+    let running = false;
+    let lastTs = performance.now();
+    let frameCount = 0;
+    let fps = 0;
+    let rafId = null;
+    let fileset = null;
+
+    let ws = null;
+    let lastSend = 0;
+    let SEND_HZ = 30; // default, server can lower
+    let sendExtended = false; // switch to v2 when server advertises
+    let frameId = 0;
+
+    // --- Model URL ---
+    const MODEL_BASE = 'https://storage.googleapis.com/mediapipe-models/pose_landmarker';
+    const keyToDir = { lite: 'pose_landmarker_lite', full: 'pose_landmarker_full', heavy: 'pose_landmarker_heavy' };
+    function buildModelURL(key){
+      const dir = keyToDir[key];
+      return `${MODEL_BASE}/${dir}/float16/1/${dir}.task`;
+    }
+
+    // --- Utils ---
+    function appendLog(msg,cls=''){const p=document.createElement('div');p.className=cls;p.textContent=msg;logEl.appendChild(p);logEl.scrollTop=logEl.scrollHeight;}
+    function status(s){ statusEl.textContent = s; }
+
+    async function ensureFileset(){
+      if(!fileset){
+        fileset = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm");
+      }
+      return fileset;
+    }
+
+    async function createLandmarker(modelKey){
+      status('loading model');
+      const fs = await ensureFileset();
+      const modelUrl = buildModelURL(modelKey);
+      landmarker = await PoseLandmarker.createFromOptions(fs, {
+        baseOptions: { modelAssetPath: modelUrl },
+        runningMode: 'VIDEO',
+        numPoses: 1,
+        minPoseDetectionConfidence: 0.5,
+        minPosePresenceConfidence: 0.5,
+        minTrackingConfidence: 0.5,
+        smoothLandmarks: true,
+        outputSegmentationMasks: false
+      });
+      status('model ready');
+    }
+
+    async function ensureModel(){
+      if(!landmarker){ await createLandmarker(modelSel.value); }
+    }
+
+    // --- Rendering ---
+    function draw(results){
+      ctx.clearRect(0,0,overlay.width,overlay.height);
+      const utils=new DrawingUtils(ctx);
+      const {landmarks}=results||{};
+      if(!landmarks) return;
+      for(const lm of landmarks){
+        utils.drawLandmarks(lm,{radius:2});
+        utils.drawConnectors(lm, PoseLandmarker.POSE_CONNECTIONS);
+      }
+    }
+
+    // --- Stats + stream ---
+    function updateStats(results,startTs){
+      const now=performance.now();
+      frameCount++;
+      if(now-lastTs>=500){ fps=Math.round((frameCount*1000)/(now-lastTs)); frameCount=0; lastTs=now; fpsEl.textContent=String(fps); }
+      latEl.textContent=String(Math.round(now-startTs));
+      const poses=results?.landmarks?.length||0;
+      poseCountEl.textContent=String(poses);
+      if(poses>0){
+        const lm=results.landmarks[0];
+        leftElbowEl.textContent=`(${lm[13].x.toFixed(3)}, ${lm[13].y.toFixed(3)}, ${lm[13].z.toFixed(3)})`;
+        rightElbowEl.textContent=`(${lm[14].x.toFixed(3)}, ${lm[14].y.toFixed(3)}, ${lm[14].z.toFixed(3)})`;
+        const zsum=lm.reduce((a,p)=>a+p.z,0)/lm.length; zAvgEl.textContent=zsum.toFixed(3);
+      } else {
+        leftElbowEl.textContent=rightElbowEl.textContent=zAvgEl.textContent='-';
+      }
+      if(results?.landmarks && ws && ws.readyState===WebSocket.OPEN){
+        sendToWS(results);
+      }
+    }
+
+    // --- Main loop ---
+    async function loop(){
+      if(!running) return;
+      const ts=performance.now();
+      let results={};
+      try{ results=await landmarker.detectForVideo(video,ts);}catch(err){appendLog(`detectForVideo error: ${err}`,'err');}
+      draw(results);
+      // expose world landmarks for WS packaging if present
+      if(results?.worldLandmarks){ window.__lastWorld = results.worldLandmarks; }
+      updateStats(results,ts);
+      rafId=requestAnimationFrame(loop);
+    }
+
+    // --- WS ---
+    function wsConnect(){
+      wsClose();
+      ws=new WebSocket(wsUrlEl.value.trim());
+      ws.onopen=()=>{wsStateEl.textContent='open'; appendLog('WS open','ok');};
+      ws.onclose=()=>{wsStateEl.textContent='closed'; appendLog('WS closed','warn');};
+      ws.onerror=(e)=>{appendLog(`WS error ${e?.message||''}`,'err');};
+      ws.onmessage=(ev)=>{ handleServerMessage(ev.data); };
+    }
+    function wsClose(){ if(ws){try{ws.close();}catch{} ws=null;} }
+
+    function handleServerMessage(data){
+      try{
+        const m = typeof data === 'string' ? JSON.parse(data) : data;
+        if(m?.warning==='backpressure' && typeof m?.queued==='number'){
+          SEND_HZ = Math.max(5, Math.floor(SEND_HZ*0.8));
+          appendLog(`backpressure → throttling to ${SEND_HZ} Hz (queued=${m.queued})`,'warn');
+        }
+        if(m?.type==='rate' && typeof m?.hz==='number'){
+          SEND_HZ = Math.max(1, Math.min(60, Math.floor(m.hz)));
+          appendLog(`server rate set → ${SEND_HZ} Hz`,'ok');
+        }
+        if(m?.type==='server_caps' && m?.schema==='pose.v2'){
+          sendExtended = true;
+          appendLog('server supports pose.v2 schema → extended payload enabled','ok');
+        }
+      }catch{}
+    }
+
+    function buildPayload(results){
+      if(!Array.isArray(results.landmarks) || results.landmarks.length===0) return null;
+      const lm = results.landmarks[0];
+      const wl = (results.worldLandmarks && results.worldLandmarks[0]) || (window.__lastWorld && window.__lastWorld[0]) || null;
+      if(!wl){ appendLog('world_landmarks missing; check model/assets','warn'); }
+
+      const toObj = (p)=>({ x:+p.x, y:+p.y, z:+p.z, ...(p.visibility!=null?{visibility:+p.visibility}:{}), ...(p.presence!=null?{presence:+p.presence}:{}) });
+      const toW = (p)=>({ x:+p.x, y:+p.y, z:+p.z, ...(p.visibility!=null?{visibility:+p.visibility}:{}) });
+
+      const vis = lm.map(p=>p.visibility??0);
+      const pres = lm.map(p=>p.presence??0);
+      const q = { avg_visibility: +(vis.reduce((a,b)=>a+b,0)/vis.length).toFixed(4), avg_presence: +(pres.reduce((a,b)=>a+b,0)/pres.length).toFixed(4) };
+
+      if(sendExtended){
+        return {
+          schema: 'pose.v2',
+          tracker: 'mediapipe-pose',
+          frame_id: frameId++,
+          t_ms: Date.now(),
+          source: { width: video.videoWidth, height: video.videoHeight },
+          landmarks: lm.map(toObj),
+          ...(wl? { world_landmarks: wl.map(toW) } : {}),
+          quality: q
+        };
+      }
+      return {
+        t_ms: Date.now(),
+        landmarks: lm.map(toObj),
+        ...(wl? { world_landmarks: wl.map(toW) } : {})
+      };
+    }
+
+    function sendToWS(results){
+      const now=performance.now();
+      if(now-lastSend<1000/SEND_HZ) return; // throttle
+      lastSend=now;
+      const payload = buildPayload(results);
+      if(!payload) return;
+      try{ ws.send(JSON.stringify(payload)); }catch(e){ appendLog(`WS send error: ${e}`,'err'); }
+    }
+
+    // --- Start/stop ---
+    async function start(){
+      if(running) return;
+      await ensureModel();
+      stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'}, audio:false});
+      video.srcObject = stream; await video.play();
+      overlay.width = video.videoWidth; overlay.height = video.videoHeight;
+      running = true;
+      startBtn.disabled = true; stopBtn.disabled = false;
+      status('running');
+      if(wsEnableEl.checked) wsConnect();
+      loop();
+    }
+
+    function stop(){
+      running = false; cancelAnimationFrame(rafId);
+      if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; }
+      startBtn.disabled=false; stopBtn.disabled=true;
+      status('stopped');
+      ctx.clearRect(0,0,overlay.width,overlay.height);
+      wsClose();
+    }
+
+    // --- Diagnostics / tests ---
+    async function quickHead(url){
+      try{ const r = await fetch(url, { headers: { 'Range': 'bytes=0-0' } }); return r.ok || r.status===206; }catch{ return false; }
+    }
+
+    async function testUrls(){
+      logEl.textContent='';
+      const keys = ['lite','full','heavy'];
+      for(const k of keys){
+        const u = buildModelURL(k);
+        const ok = await quickHead(u);
+        appendLog(`${k}: ${u}`, ok? 'ok':'err');
+      }
+    }
+
+    function fakeResults(){
+      // build a single-pose frame with 33 landmarks and world_landmarks
+      const mk = ()=>({x:Math.random(), y:Math.random(), z:(Math.random()-0.5)*0.1, visibility:1, presence:1});
+      const mkW = ()=>({x:(Math.random()-0.5)*2, y:Math.random()*2, z:(Math.random()-0.5)*2, visibility:1});
+      const lm = Array.from({length:33}, mk);
+      const wl = Array.from({length:33}, mkW);
+      return { landmarks:[lm], worldLandmarks:[wl] };
+    }
+
+    function expect(cond, msg){ appendLog((cond? 'PASS: ':'FAIL: ')+msg, cond? 'ok':'err'); }
+
+    function testPayloadLegacy(){
+      sendExtended=false;
+      const p = buildPayload(fakeResults());
+      const ok = !!p && typeof p.t_ms==='number' && Array.isArray(p.landmarks) && p.landmarks.length===33 && Array.isArray(p.world_landmarks) && p.world_landmarks.length===33;
+      expect(ok, 'legacy payload shape with world_landmarks');
+    }
+
+    function testPayloadV2(){
+      sendExtended=true;
+      frameId=0;
+      const p = buildPayload(fakeResults());
+      const ok = p && p.schema==='pose.v2' && p.tracker==='mediapipe-pose' && typeof p.frame_id==='number' && p.source?.width!==undefined && p.quality?.avg_visibility!==undefined;
+      expect(ok, 'v2 payload shape with metadata');
+    }
+
+    function testRate(){
+      const old = SEND_HZ;
+      handleServerMessage({warning:'backpressure', queued:250});
+      expect(SEND_HZ < old, 'backpressure lowers rate');
+      handleServerMessage({type:'rate', hz:12});
+      expect(SEND_HZ === 12, 'server rate sets exact Hz');
+    }
+
+    ui('testUrls').addEventListener('click', testUrls);
+    ui('testPayloadLegacy').addEventListener('click', testPayloadLegacy);
+    ui('testPayloadV2').addEventListener('click', testPayloadV2);
+    ui('testRate').addEventListener('click', testRate);
+    ui('runAll').addEventListener('click', async ()=>{ testUrls(); testPayloadLegacy(); testPayloadV2(); testRate(); });
+
+    // Wire controls
+    startBtn.addEventListener('click',start);
+    stopBtn.addEventListener('click',stop);
+    modelSel.addEventListener('change',async()=>{if(landmarker){landmarker.close?.(); landmarker=null;} await createLandmarker(modelSel.value);});
+    wsEnableEl.addEventListener('change',()=>{if(wsEnableEl.checked && running) wsConnect(); else wsClose();});
+  </script>
+</body>
+</html>
