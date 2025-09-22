@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MediaPipe Pose Landmarker — Web App</title>
+  <style>
+    :root{--bg:#0b0f14;--panel:#111823;--ink:#d9e1ee;--muted:#8aa0b6;--accent:#5bbcff;--ok:#3bd671;--warn:#ffcc66;--err:#ff7a7a}
+    *{box-sizing:border-box}html,body{height:100%}body{margin:0;background:linear-gradient(180deg,#0b0f14,#0e141d);color:var(--ink);font:14px/1.4 system-ui,Segoe UI,Roboto,Helvetica,Arial}
+    .wrap{max-width:1200px;margin:0 auto;padding:20px}
+    header{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:12px}
+    h1{font-size:18px;margin:0;font-weight:600}
+    .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+    .chip{background:var(--panel);padding:8px 10px;border-radius:12px;display:flex;gap:8px;align-items:center;border:1px solid #1d2836}
+    .chip label{font-size:12px;color:var(--muted)}
+    select,input{background:transparent;color:var(--ink);border:1px solid #1d2a3e;border-radius:8px;padding:4px 6px}
+    .btn{cursor:pointer;background:var(--accent);border:0;color:#021d2b;padding:9px 12px;border-radius:10px;font-weight:600}
+    .btn.secondary{background:#192539;color:var(--ink);border:1px solid #23344b}
+    .btn:disabled{opacity:.5;cursor:not-allowed}
+    .stage{position:relative;background:#05080c;border:1px solid #142034;border-radius:16px;overflow:hidden}
+    video,canvas{display:block;width:100%;height:auto}
+    #overlay{position:absolute;left:0;top:0}
+    .hud{position:absolute;left:10px;bottom:10px;background:rgba(10,16,24,.6);backdrop-filter:blur(6px);padding:8px 10px;border-radius:10px;border:1px solid #1a2a41;color:var(--muted)}
+    .pill{padding:2px 8px;border-radius:999px;border:1px solid #234162;color:#aad3ff}
+    .row{display:flex;gap:8px;align-items:center}
+    .grid{display:grid;grid-template-columns:1fr;gap:12px}
+    @media(min-width:980px){.grid{grid-template-columns:7fr 4fr}}
+    fieldset{margin:0;border:1px solid #1d2a3e;border-radius:12px;padding:10px}
+    legend{color:var(--muted);padding:0 6px;font-size:12px}
+    .kv{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px}
+    .kv div:nth-child(odd){color:var(--muted)}
+    a{color:#9bd2ff}
+    details{background:#0c131d;border:1px solid #1b2940;border-radius:12px;padding:8px 10px}
+    .log{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;white-space:pre-wrap;background:#0a1018;border:1px solid #1a2942;border-radius:8px;padding:8px;color:#b9c7da;max-height:260px;overflow:auto}
+    .ok{color:var(--ok)}.warn{color:var(--warn)}.err{color:var(--err)}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>MediaPipe Pose Landmarker</h1>
+      <div class="row" id="statusRow">
+        <span class="pill" id="status">idle</span>
+      </div>
+    </header>
+
+    <div class="grid">
+      <div>
+        <div class="controls">
+          <button id="startBtn" class="btn">Start camera</button>
+          <button id="stopBtn" class="btn secondary" disabled>Stop</button>
+          <div class="chip"><label for="modelSel">model</label>
+            <select id="modelSel">
+              <option value="lite">lite (fast)</option>
+              <option value="full">full (balanced)</option>
+              <option value="heavy">heavy (max)</option>
+            </select>
+          </div>
+          <div class="chip"><label for="variantSel">precision</label>
+            <select id="variantSel">
+              <option value="float16" selected>float16</option>
+              <option value="int8">int8</option>
+            </select>
+          </div>
+          <div class="chip"><label for="delegateSel">delegate</label>
+            <select id="delegateSel">
+              <option value="GPU" selected>GPU</option>
+              <option value="CPU">CPU</option>
+            </select>
+          </div>
+          <div class="chip"><label for="maxPoses">poses</label>
+            <input id="maxPoses" type="number" min="1" max="4" value="1" style="width:56px" />
+          </div>
+          <div class="chip"><label for="smoothing">smoothing</label>
+            <input id="smoothing" type="checkbox" checked />
+          </div>
+        </div>
+
+        <div class="stage" style="margin-top:12px">
+          <video id="video" playsinline muted></video>
+          <canvas id="overlay"></canvas>
+          <div class="hud">
+            <div class="row" style="gap:12px">
+              <span>FPS: <strong id="fps">0</strong></span>
+              <span>Latency: <strong id="lat">0</strong> ms</span>
+              <span>Model: <strong id="modelName">lite</strong></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <fieldset>
+          <legend>Pose data</legend>
+          <div class="kv" id="poseData">
+            <div>poses</div><div id="poseCount">0</div>
+            <div>left elbow</div><div id="leftElbow">-</div>
+            <div>right elbow</div><div id="rightElbow">-</div>
+            <div>z avg</div><div id="zAvg">-</div>
+          </div>
+        </fieldset>
+
+        <details style="margin-top:12px">
+          <summary>Diagnostics & tests</summary>
+          <div class="row" style="gap:8px;margin:8px 0">
+            <button id="testUrls" class="btn secondary">Check model URLs</button>
+            <button id="testInitLite" class="btn secondary">Init lite</button>
+            <button id="testInitFull" class="btn secondary">Init full</button>
+            <button id="testInitHeavy" class="btn secondary">Init heavy</button>
+            <button id="runAll" class="btn">Run all tests</button>
+          </div>
+          <div class="log" id="log"></div>
+          <p style="color:var(--muted);margin-top:8px">Tests verify URL reachability with a ranged request and try task initialization without starting the camera.</p>
+        </details>
+
+        <p style="color:var(--muted);margin-top:10px">Docs: MediaPipe Tasks Vision → Pose Landmarker (Web).</p>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { FilesetResolver, PoseLandmarker, DrawingUtils } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest";
+
+    const ui = (id)=>document.getElementById(id);
+    const video = ui('video');
+    const overlay = ui('overlay');
+    const ctx = overlay.getContext('2d');
+    const startBtn = ui('startBtn');
+    const stopBtn = ui('stopBtn');
+    const modelSel = ui('modelSel');
+    const variantSel = ui('variantSel');
+    const delegateSel = ui('delegateSel');
+    const fpsEl = ui('fps');
+    const latEl = ui('lat');
+    const statusEl = ui('status');
+    const modelNameEl = ui('modelName');
+    const poseCountEl = ui('poseCount');
+    const leftElbowEl = ui('leftElbow');
+    const rightElbowEl = ui('rightElbow');
+    const zAvgEl = ui('zAvg');
+    const smoothingEl = ui('smoothing');
+    const maxPosesEl = ui('maxPoses');
+    const logEl = ui('log');
+
+    let landmarker = null;
+    let stream = null;
+    let running = false;
+    let lastTs = performance.now();
+    let frameCount = 0;
+    let fps = 0;
+    let rafId = null;
+    let fileset = null;
+
+    // --- Model URL helpers (fixes 404 by using official mediapipe-models bucket) ---
+    const MODEL_BASE = 'https://storage.googleapis.com/mediapipe-models/pose_landmarker';
+    const keyToDir = { lite: 'pose_landmarker_lite', full: 'pose_landmarker_full', heavy: 'pose_landmarker_heavy' };
+    function buildModelURL(key, variant='float16', version='1'){
+      const dir = keyToDir[key];
+      return `${MODEL_BASE}/${dir}/${variant}/${version}/${dir}.task`;
+    }
+
+    async function pickAvailableModel(key){
+      // Try versioned path first, then 'latest'. Use range request to avoid full download.
+      const variant = variantSel.value;
+      const candidates = [ buildModelURL(key, variant, '1'), buildModelURL(key, variant, 'latest') ];
+      for(const url of candidates){
+        const ok = await quickHead(url);
+        if(ok) return url;
+      }
+      // Final fallback: try float16 then int8 across both versions
+      const fallbacks = [
+        buildModelURL(key, 'float16', '1'), buildModelURL(key, 'float16', 'latest'),
+        buildModelURL(key, 'int8', '1'), buildModelURL(key, 'int8', 'latest')
+      ];
+      for(const url of fallbacks){
+        if(await quickHead(url)) return url;
+      }
+      return null;
+    }
+
+    async function quickHead(url){
+      try{
+        // Use a ranged GET to avoid full download. GCS supports Range.
+        const r = await fetch(url, { headers: { 'Range': 'bytes=0-0' } });
+        return r.ok || r.status===206; // 200 or 206
+      }catch(e){ return false; }
+    }
+
+    async function ensureFileset(){
+      if(!fileset){
+        fileset = await FilesetResolver.forVisionTasks(
+          "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
+        );
+      }
+      return fileset;
+    }
+
+    async function createLandmarker(modelKey){
+      status('loading model');
+      const fs = await ensureFileset();
+      const selectedDelegate = delegateSel.value;
+      const modelUrl = await pickAvailableModel(modelKey);
+      if(!modelUrl){
+        throw new Error(`No reachable model found for ${modelKey}. Check network or CORS.`);
+      }
+      try{
+        landmarker = await PoseLandmarker.createFromOptions(fs, {
+          baseOptions: {
+            modelAssetPath: modelUrl,
+            delegate: selectedDelegate
+          },
+          runningMode: 'VIDEO',
+          numPoses: clamp(parseInt(maxPosesEl.value)||1,1,4),
+          outputSegmentationMasks: false,
+          minPoseDetectionConfidence: 0.5,
+          minPosePresenceConfidence: 0.5,
+          minTrackingConfidence: 0.5,
+          smoothLandmarks: smoothingEl.checked
+        });
+        modelNameEl.textContent = `${modelKey}`;
+        status('model ready');
+      }catch(err){
+        // Retry on CPU if GPU fails
+        if(selectedDelegate === 'GPU'){
+          appendLog(`GPU init failed → retrying on CPU.\n${err}`, 'warn');
+          delegateSel.value = 'CPU';
+          return createLandmarker(modelKey);
+        }
+        throw err;
+      }
+    }
+
+    function status(s){ statusEl.textContent = s; }
+    function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
+
+    async function start(){
+      if(running) return;
+      await ensureModel();
+      stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1280},height:{ideal:720}}, audio:false});
+      video.srcObject = stream; await video.play();
+      sizeCanvases();
+      running = true;
+      startBtn.disabled = true; stopBtn.disabled = false; modelSel.disabled = true; maxPosesEl.disabled = true; variantSel.disabled = true; delegateSel.disabled = true;
+      status('running');
+      loop();
+    }
+
+    function stop(){
+      running = false; cancelAnimationFrame(rafId);
+      if(stream){ stream.getTracks().forEach(t=>t.stop()); stream = null; }
+      startBtn.disabled = false; stopBtn.disabled = true; modelSel.disabled = false; maxPosesEl.disabled = false; variantSel.disabled = false; delegateSel.disabled = false;
+      status('stopped');
+      ctx.clearRect(0,0,overlay.width, overlay.height);
+    }
+
+    function sizeCanvases(){
+      const {videoWidth:w, videoHeight:h} = video;
+      overlay.width = w; overlay.height = h;
+    }
+
+    async function ensureModel(){
+      if(!landmarker){ await createLandmarker(modelSel.value); }
+    }
+
+    async function reloadModel(){
+      if(landmarker){ landmarker.close?.(); landmarker = null; }
+      await createLandmarker(modelSel.value);
+    }
+
+    function draw(results){
+      ctx.clearRect(0,0,overlay.width, overlay.height);
+      const utils = new DrawingUtils(ctx);
+      const {landmarks} = results || {};
+      if(!landmarks) return;
+      for(const lm of landmarks){
+        utils.drawLandmarks(lm,{radius:2});
+        utils.drawConnectors(lm, PoseLandmarker.POSE_CONNECTIONS);
+      }
+    }
+
+    function updateStats(results, startTs){
+      const now = performance.now();
+      frameCount++;
+      if(now - lastTs >= 500){
+        fps = Math.round((frameCount * 1000) / (now - lastTs));
+        frameCount = 0; lastTs = now; fpsEl.textContent = String(fps);
+      }
+      latEl.textContent = String(Math.round(now - startTs));
+
+      const poses = results?.landmarks?.length || 0;
+      poseCountEl.textContent = String(poses);
+      if(poses>0){
+        const lm = results.landmarks[0];
+        const LEFT_ELBOW = 13, RIGHT_ELBOW = 14;
+        const le = lm[LEFT_ELBOW]; const re = lm[RIGHT_ELBOW];
+        leftElbowEl.textContent = `(${le.x.toFixed(3)}, ${le.y.toFixed(3)}, ${le.z.toFixed(3)})`;
+        rightElbowEl.textContent = `(${re.x.toFixed(3)}, ${re.y.toFixed(3)}, ${re.z.toFixed(3)})`;
+        const zsum = lm.reduce((a,p)=>a+p.z,0)/lm.length; zAvgEl.textContent = zsum.toFixed(3);
+      } else {
+        leftElbowEl.textContent = rightElbowEl.textContent = zAvgEl.textContent = '-';
+      }
+    }
+
+    async function loop(){
+      if(!running) return;
+      const ts = performance.now();
+      let results = { };
+      try{
+        results = await landmarker.detectForVideo(video, ts);
+      }catch(err){
+        appendLog(`detectForVideo error: ${err}`, 'err');
+      }
+      draw(results);
+      updateStats(results, ts);
+      rafId = requestAnimationFrame(loop);
+    }
+
+    startBtn.addEventListener('click', start);
+    stopBtn.addEventListener('click', stop);
+    modelSel.addEventListener('change', async ()=>{ await reloadModel(); });
+    variantSel.addEventListener('change', async ()=>{ await reloadModel(); });
+    delegateSel.addEventListener('change', async ()=>{ await reloadModel(); });
+    smoothingEl.addEventListener('change', ()=>{ if(landmarker) landmarker.setOptions({smoothLandmarks: smoothingEl.checked}); });
+    maxPosesEl.addEventListener('change', ()=>{ if(landmarker) landmarker.setOptions({numPoses: clamp(parseInt(maxPosesEl.value)||1,1,4)}); });
+
+    window.addEventListener('resize', ()=>{ if(video.videoWidth) sizeCanvases(); });
+
+    if(!('mediaDevices' in navigator)){
+      status('no camera API');
+      startBtn.disabled = true;
+    }
+
+    // --- Diagnostics / tests ---
+    function appendLog(msg, cls=''){
+      const p = document.createElement('div');
+      p.className = cls; p.textContent = msg; logEl.appendChild(p); logEl.scrollTop = logEl.scrollHeight;
+    }
+    function clearLog(){ logEl.textContent = ''; }
+
+    async function testUrls(){
+      clearLog();
+      appendLog('Model URL reachability (range=0-0):');
+      for(const key of Object.keys(keyToDir)){
+        const u1 = buildModelURL(key, variantSel.value, '1');
+        const uL = buildModelURL(key, variantSel.value, 'latest');
+        appendLog(`\n${key} 1 → ${u1}`);
+        appendLog((await quickHead(u1)) ? ' PASS' : ' FAIL', (await quickHead(u1))? 'ok':'err');
+        appendLog(`${key} latest → ${uL}`);
+        appendLog((await quickHead(uL)) ? ' PASS' : ' FAIL', (await quickHead(uL))? 'ok':'err');
+      }
+    }
+
+    async function testInit(key){
+      clearLog();
+      try{
+        const fs = await ensureFileset();
+        const url = await pickAvailableModel(key);
+        if(!url) throw new Error('no reachable model');
+        const tmp = await PoseLandmarker.createFromOptions(fs, {
+          baseOptions: { modelAssetPath: url, delegate: 'CPU' }, // use CPU for predictability
+          runningMode: 'IMAGE',
+          numPoses: 1
+        });
+        tmp.close?.();
+        appendLog(`Init ${key}: PASS`, 'ok');
+      }catch(e){
+        appendLog(`Init ${key}: FAIL\n${e}`, 'err');
+      }
+    }
+
+    ui('testUrls').addEventListener('click', testUrls);
+    ui('testInitLite').addEventListener('click', ()=>testInit('lite'));
+    ui('testInitFull').addEventListener('click', ()=>testInit('full'));
+    ui('testInitHeavy').addEventListener('click', ()=>testInit('heavy'));
+    ui('runAll').addEventListener('click', async ()=>{ await testUrls(); await testInit('lite'); await testInit('full'); await testInit('heavy'); });
+  </script>
+</body>
+</html>

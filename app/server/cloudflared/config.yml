@@ -1,0 +1,7 @@
+tunnel: 05d87574-c03e-4e98-aae6-22de09ff814e
+credentials-file: /etc/cloudflared/05d87574-c03e-4e98-aae6-22de09ff814e.json
+
+ingress:
+  - hostname: api.jaehho.com
+    service: http://api:8000
+  - service: http_status:404

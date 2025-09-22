@@ -1,0 +1,26 @@
+services:
+  api:
+    build: ./api
+    restart: unless-stopped
+    expose:
+      - "8000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8000/api/health"]
+      interval: 5m
+      timeout: 5s
+      retries: 5
+    volumes:
+      - appdata:/data
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+    volumes:
+      - ./cloudflared:/etc/cloudflared:rw
+    command: tunnel run
+
+volumes:
+  appdata:
