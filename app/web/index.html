@@ -3,43 +3,34 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>MediaPipe Pose Landmarker — Web App</title>
+  <title>MediaPipe Pose & Hands — ROSBridge</title>
   <style>
     :root{--bg:#0b0f14;--panel:#111823;--ink:#d9e1ee;--muted:#8aa0b6;--accent:#5bbcff;--ok:#3bd671;--warn:#ffcc66;--err:#ff7a7a}
     *{box-sizing:border-box}
     html,body{height:100%}
     body{margin:0;background:linear-gradient(180deg,#0b0f14,#0e141d);color:var(--ink);font:14px/1.4 system-ui,Segoe UI,Roboto,Helvetica,Arial}
-    a{color:#9bd2ff}
-
     .wrap{max-width:1200px;margin:0 auto;padding:20px}
     header{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:12px}
     h1{font-size:18px;margin:0;font-weight:600}
-
     .grid{display:grid;grid-template-columns:1fr;gap:12px}
     @media(min-width:980px){.grid{grid-template-columns:7fr 4fr}}
-
     .row{display:flex;gap:8px;align-items:center}
     .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
     .chip{background:var(--panel);padding:8px 10px;border-radius:12px;display:flex;gap:8px;align-items:center;border:1px solid #1d2836}
     .chip label{font-size:12px;color:var(--muted)}
-
     select,input{background:transparent;color:var(--ink);border:1px solid #1d2a3e;border-radius:8px;padding:4px 6px}
     .btn{cursor:pointer;background:var(--accent);border:0;color:#021d2b;padding:9px 12px;border-radius:10px;font-weight:600}
     .btn.secondary{background:#192539;color:var(--ink);border:1px solid #23344b}
     .btn:disabled{opacity:.5;cursor:not-allowed}
-
     .stage{position:relative;background:#05080c;border:1px solid #142034;border-radius:16px;overflow:hidden;margin-top:12px}
     video,canvas{display:block;width:100%;height:auto}
     #overlay{position:absolute;left:0;top:0}
-
     .hud{position:absolute;left:10px;bottom:10px;background:rgba(10,16,24,.6);backdrop-filter:blur(6px);padding:8px 10px;border-radius:10px;border:1px solid #1a2a41;color:var(--muted)}
     .pill{padding:2px 8px;border-radius:999px;border:1px solid #234162;color:#aad3ff}
-
     fieldset{margin:0;border:1px solid #1d2a3e;border-radius:12px;padding:10px}
     legend{color:var(--muted);padding:0 6px;font-size:12px}
     .kv{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px}
     .kv div:nth-child(odd){color:var(--muted)}
-
     details{background:#0c131d;border:1px solid #1b2940;border-radius:12px;padding:8px 10px}
     .log{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;white-space:pre-wrap;background:#0a1018;border:1px solid #1a2942;border-radius:8px;padding:8px;color:#b9c7da;max-height:260px;overflow:auto}
     .ok{color:var(--ok)}.warn{color:var(--warn)}.err{color:var(--err)}
@@ -48,8 +39,8 @@
 <body>
   <div class="wrap">
     <header>
-      <h1>MediaPipe Pose Landmarker</h1>
-      <div class="row" id="statusRow"><span class="pill" id="status">idle</span></div>
+      <h1>MediaPipe Pose & Hands → rosbridge</h1>
+      <div class="row"><span class="pill" id="status">idle</span></div>
     </header>
 
     <div class="grid">
@@ -57,15 +48,21 @@
         <div class="controls">
           <button id="startBtn" class="btn">Start camera</button>
           <button id="stopBtn" class="btn secondary" disabled>Stop</button>
-          <div class="chip"><label for="modelSel">model</label>
+          <div class="chip"><label for="modelSel">pose model</label>
             <select id="modelSel">
-              <option value="lite">lite (fast)</option>
-              <option value="full">full (balanced)</option>
-              <option value="heavy">heavy (max)</option>
+              <option value="lite">lite</option>
+              <option value="full">full</option>
+              <option value="heavy">heavy</option>
             </select>
           </div>
-          <div class="chip"><label for="wsUrl">ws</label>
-            <input id="wsUrl" value="wss://api.jaehho.com/api/pose/v1/ws" style="width:280px" />
+          <div class="chip"><label for="wsUrl">rosbridge</label>
+            <input id="wsUrl" value="wss://api.jaehho.com" style="width:260px" />
+          </div>
+          <div class="chip"><label for="poseTopic">pose topic</label>
+            <input id="poseTopic" value="pose_landmarks" style="width:160px" />
+          </div>
+          <div class="chip"><label for="handTopic">hand topic</label>
+            <input id="handTopic" value="hand_landmarks" style="width:160px" />
           </div>
           <div class="chip"><label for="wsEnable">stream</label>
             <input id="wsEnable" type="checkbox" />
@@ -88,7 +85,7 @@
       <div>
         <fieldset>
           <legend>Pose data</legend>
-          <div class="kv" id="poseData">
+          <div class="kv">
             <div>poses</div><div id="poseCount">0</div>
             <div>left elbow</div><div id="leftElbow">-</div>
             <div>right elbow</div><div id="rightElbow">-</div>
@@ -101,8 +98,7 @@
           <div class="row" style="gap:8px;margin:8px 0">
             <button id="testUrls" class="btn secondary">Check model URLs</button>
             <button id="testPayloadV2" class="btn secondary">Test payload (v2)</button>
-            <button id="testRate" class="btn secondary">Test rate control</button>
-            <button id="runAll" class="btn">Run all tests</button>
+            <button id="runAll" class="btn">Run tests</button>
           </div>
           <div class="log" id="log"></div>
         </details>
@@ -111,131 +107,185 @@
   </div>
 
   <script type="module">
-    import { FilesetResolver, PoseLandmarker, DrawingUtils } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest";
+    import { FilesetResolver, PoseLandmarker, HandLandmarker, DrawingUtils } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest";
 
     const $ = (id)=>document.getElementById(id);
     const el = {
       video: $('video'), overlay: $('overlay'),
       start: $('startBtn'), stop: $('stopBtn'), model: $('modelSel'),
-      fps: $('fps'), lat: $('lat'), status: $('status'),
+      fps: $('fps'), lat: $('lat'), status: $('status'), wsState: $('wsState'),
       poseCount: $('poseCount'), leftElbow: $('leftElbow'), rightElbow: $('rightElbow'), zAvg: $('zAvg'),
-      wsUrl: $('wsUrl'), wsEnable: $('wsEnable'), wsState: $('wsState'),
+      wsUrl: $('wsUrl'), wsEnable: $('wsEnable'),
+      poseTopic: $('poseTopic'), handTopic: $('handTopic'),
       log: $('log')
     };
     const ctx = el.overlay.getContext('2d');
 
-    let fileset, landmarker, stream, running=false, rafId=null;
+    let fileset, poseLM, handLM, stream, running=false, rafId=null;
     let lastTs=performance.now(), frames=0;
     let ws=null, lastSend=0, SEND_HZ=30, frameId=0;
 
-    const MODEL_BASE = 'https://storage.googleapis.com/mediapipe-models/pose_landmarker';
-    const keyToDir = { lite:'pose_landmarker_lite', full:'pose_landmarker_full', heavy:'pose_landmarker_heavy' };
-    const buildModelURL = (key)=>`${MODEL_BASE}/${keyToDir[key]}/float16/1/${keyToDir[key]}.task`;
+    // Models
+    const MP_BASE = 'https://storage.googleapis.com/mediapipe-models';
+    const poseKeyToDir = { lite:'pose_landmarker_lite', full:'pose_landmarker_full', heavy:'pose_landmarker_heavy' };
+    const buildPoseURL = (key)=>`${MP_BASE}/pose_landmarker/${poseKeyToDir[key]}/float16/1/${poseKeyToDir[key]}.task`;
+    const HAND_MODEL_URL = `${MP_BASE}/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task`;
 
     const log = (msg,cls='')=>{const p=document.createElement('div');p.className=cls;p.textContent=msg;el.log.appendChild(p);el.log.scrollTop=el.log.scrollHeight};
     const setStatus = (s)=>{ el.status.textContent=s };
 
     const ensureFileset = async()=> fileset ||= await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm");
 
-    async function createLandmarker(key){
-      setStatus('loading model');
+    async function createPose(key){
       const fs = await ensureFileset();
-      landmarker = await PoseLandmarker.createFromOptions(fs, {
-        baseOptions:{ modelAssetPath: buildModelURL(key) },
+      poseLM = await PoseLandmarker.createFromOptions(fs, {
+        baseOptions:{ modelAssetPath: buildPoseURL(key) },
         runningMode:'VIDEO', numPoses:1,
         minPoseDetectionConfidence:0.5, minPosePresenceConfidence:0.5, minTrackingConfidence:0.5,
         smoothLandmarks:true, outputSegmentationMasks:false
       });
-      setStatus('model ready');
     }
 
-    const ensureModel = async()=> landmarker || await createLandmarker(el.model.value);
+    async function createHands(){
+      const fs = await ensureFileset();
+      handLM = await HandLandmarker.createFromOptions(fs, {
+        baseOptions:{ modelAssetPath: HAND_MODEL_URL },
+        runningMode:'VIDEO', numHands:2,
+        minHandDetectionConfidence:0.5, minHandPresenceConfidence:0.5, minTrackingConfidence:0.5
+      });
+    }
 
-    function draw(results){
+    const ensureModels = async()=>{
+      if(!poseLM) await createPose(el.model.value);
+      if(!handLM) await createHands();
+      setStatus('models ready');
+    };
+
+    function draw(resultsPose, resultsHands){
       ctx.clearRect(0,0,el.overlay.width,el.overlay.height);
       const utils=new DrawingUtils(ctx);
-      const {landmarks}=results||{}; if(!landmarks) return;
-      for(const lm of landmarks){ utils.drawLandmarks(lm,{radius:2}); utils.drawConnectors(lm, PoseLandmarker.POSE_CONNECTIONS); }
+      const lmPose=resultsPose?.landmarks||[];
+      for(const lm of lmPose){ utils.drawLandmarks(lm,{radius:2}); utils.drawConnectors(lm, PoseLandmarker.POSE_CONNECTIONS); }
+      const lmHands=resultsHands?.landmarks||[];
+      for(const lm of lmHands){ utils.drawLandmarks(lm,{radius:2}); utils.drawConnectors(lm, HandLandmarker.HAND_CONNECTIONS); }
     }
 
-    function updateStats(results,startTs){
+    function updateStats(resultsPose,startTs){
       const now=performance.now();
       if(++frames && now-lastTs>=500){ el.fps.textContent=String(Math.round((frames*1000)/(now-lastTs))); frames=0; lastTs=now; }
       el.lat.textContent=String(Math.round(now-startTs));
-      const poses=results?.landmarks?.length||0; el.poseCount.textContent=String(poses);
+      const poses=resultsPose?.landmarks?.length||0; el.poseCount.textContent=String(poses);
       if(poses){
-        const lm=results.landmarks[0];
+        const lm=resultsPose.landmarks[0];
         const f=(n)=>n.toFixed(3);
         el.leftElbow.textContent=`(${f(lm[13].x)}, ${f(lm[13].y)}, ${f(lm[13].z)})`;
         el.rightElbow.textContent=`(${f(lm[14].x)}, ${f(lm[14].y)}, ${f(lm[14].z)})`;
         el.zAvg.textContent=(lm.reduce((a,p)=>a+p.z,0)/lm.length).toFixed(3);
       } else { el.leftElbow.textContent=el.rightElbow.textContent=el.zAvg.textContent='-'; }
-      if(results?.landmarks && ws?.readyState===WebSocket.OPEN) sendToWS(results);
     }
 
     async function loop(){
       if(!running) return;
       const ts=performance.now();
-      let results={};
-      try{ results=await landmarker.detectForVideo(el.video,ts);}catch(err){log(`detectForVideo error: ${err}`,'err');}
-      draw(results);
-      updateStats(results,ts);
+      let rPose={}, rHands={};
+      try{ rPose=await poseLM.detectForVideo(el.video,ts);}catch(err){log(`pose detect error: ${err}`,'err');}
+      try{ rHands=await handLM.detectForVideo(el.video,ts);}catch(err){log(`hand detect error: ${err}`,'err');}
+      draw(rPose, rHands);
+      updateStats(rPose,ts);
+      if(ws?.readyState===WebSocket.OPEN){
+        sendPose(rPose);
+        sendHands(rHands);
+      }
       rafId=requestAnimationFrame(loop);
     }
 
+    // ---- rosbridge ----
     function wsConnect(){
       wsClose();
       ws=new WebSocket(el.wsUrl.value.trim());
-      ws.onopen=()=>{el.wsState.textContent='open'; log('WS open','ok')};
-      ws.onclose=()=>{el.wsState.textContent='closed'; log('WS closed','warn')};
-      ws.onerror=(e)=>log(`WS error ${e?.message||''}`,'err');
-      ws.onmessage=(ev)=>handleServerMessage(ev.data);
-    }
-    const wsClose=()=>{ if(ws){ try{ws.close()}catch{} ws=null } };
-
-    function handleServerMessage(data){
-      try{
-        const m = typeof data==='string'? JSON.parse(data): data;
-        if(m?.warning==='backpressure' && typeof m?.queued==='number'){
-          SEND_HZ = Math.max(5, Math.floor(SEND_HZ*0.8));
-          log(`backpressure → throttling to ${SEND_HZ} Hz (queued=${m.queued})`,'warn');
-        }
-        if(m?.type==='rate' && typeof m?.hz==='number'){
-          SEND_HZ = Math.max(1, Math.min(60, Math.floor(m.hz)));
-          log(`server rate set → ${SEND_HZ} Hz`,'ok');
-        }
-      }catch{}
-    }
-
-    function buildPayload(results){
-      if(!results?.landmarks?.length || !results?.worldLandmarks?.[0]) return null;
-      const lm = results.landmarks[0];
-      const wl = results.worldLandmarks[0];
-
-      const toObj = (p)=>({ x:+p.x, y:+p.y, z:+p.z, ...(p.visibility!=null?{visibility:+p.visibility}:{}) , ...(p.presence!=null?{presence:+p.presence}:{}) });
-      const toW = (p)=>({ x:+p.x, y:+p.y, z:+p.z, ...(p.visibility!=null?{visibility:+p.visibility}:{}) });
-
-      const vis = lm.map(p=>p.visibility??0), pres = lm.map(p=>p.presence??0);
-      return {
-        schema:'pose.v2', tracker:'mediapipe-pose', frame_id: frameId++, t_ms: Date.now(),
-        source:{ width: el.video.videoWidth, height: el.video.videoHeight },
-        landmarks: lm.map(toObj), world_landmarks: wl.map(toW),
-        quality:{ avg_visibility: +(vis.reduce((a,b)=>a+b,0)/vis.length).toFixed(4), avg_presence: +(pres.reduce((a,b)=>a+b,0)/pres.length).toFixed(4) }
+      ws.onopen=()=>{
+        el.wsState.textContent='open'; log('WS open','ok');
+        // Advertise both topics with custom message types
+        try{ ws.send(JSON.stringify({ op:'advertise', topic: el.poseTopic.value.trim(), type:'custom_interfaces/PoseLandmark' })); log(`advertised ${el.poseTopic.value}`,'ok'); }catch(e){ log(`advertise pose err: ${e}`,'err'); }
+        try{ ws.send(JSON.stringify({ op:'advertise', topic: el.handTopic.value.trim(), type:'custom_interfaces/HandLandmark' })); log(`advertised ${el.handTopic.value}`,'ok'); }catch(e){ log(`advertise hand err: ${e}`,'err'); }
       };
+      ws.onclose=()=>{ el.wsState.textContent='closed'; log('WS closed','warn') };
+      ws.onerror=(e)=>log(`WS error ${e?.message||''}`,'err');
+      ws.onmessage=(ev)=>{ try{ const m=JSON.parse(ev.data); if(m?.op) log(`← ${m.op}`); }catch{} };
     }
 
-    function sendToWS(results){
+    function wsClose(){
+      if(ws && ws.readyState===WebSocket.OPEN){
+        try{ ws.send(JSON.stringify({ op:'unadvertise', topic: el.poseTopic.value.trim() })); }catch{}
+        try{ ws.send(JSON.stringify({ op:'unadvertise', topic: el.handTopic.value.trim() })); }catch{}
+      }
+      try{ ws?.close(); }catch{}
+      ws=null;
+    }
+
+    // ---- payload builders ----
+    const POSE_LABELS = {11:'left_shoulder',12:'right_shoulder',13:'left_elbow',14:'right_elbow',15:'left_wrist',16:'right_wrist',23:'left_hip',24:'right_hip'};
+
+    function buildPoseMsg(resultsPose){
+      const wl = resultsPose?.worldLandmarks?.[0];
+      if(!wl) return null;
+      const msg = { label: [], point: [] };
+      for(const idxStr of Object.keys(POSE_LABELS)){
+        const idx = Number(idxStr); const p = wl[idx]; if(!p) continue;
+        msg.label.push(POSE_LABELS[idx]);
+        msg.point.push({ x:+p.x, y:+p.y, z:+p.z }); // geometry_msgs/Point
+      }
+      return msg;
+    }
+
+    function handIsOpen(lm){
+      const d=(i,j)=>{ const p=lm[i], q=lm[j]; return Math.hypot(p.x-q.x, p.y-q.y, p.z-q.z); };
+      const wrist=0, mcp=9, tips=[4,8,12,16,20];
+      const ref = d(wrist,mcp);
+      const closed = tips.reduce((acc,t)=> acc + (d(wrist,t) < ref ? 1:0), 0);
+      return (closed < 3);
+    }
+
+    function buildHandMsg(resultsHands){
+      const hands = resultsHands?.landmarks || [];
+      if(!hands.length) return null;
+      const msg = { label: [], status: [] };
+      const handedness = resultsHands.handedness || [];
+      for(let i=0;i<hands.length;i++){
+        const label = (handedness[i]?.[0]?.categoryName||'unknown').toLowerCase()+"_hand";
+        msg.label.push(label);
+        msg.status.push(!!handIsOpen(hands[i]));
+      }
+      return msg;
+    }
+
+    // ---- publishers ----
+    function publish(topic, type, msg){
+      if(!ws || ws.readyState!==WebSocket.OPEN) return;
+      try{ ws.send(JSON.stringify({ op:'publish', topic, msg })); }
+      catch(e){ log(`publish error: ${e}`,'err'); }
+    }
+
+    function sendPose(rPose){
       const now=performance.now();
       if(now-lastSend<1000/SEND_HZ) return;
       lastSend=now;
-      const payload = buildPayload(results);
-      if(payload) try{ ws.send(JSON.stringify(payload)) }catch(e){ log(`WS send error: ${e}`,'err') }
+      const msg = buildPoseMsg(rPose);
+      if(msg) publish(el.poseTopic.value.trim(), 'custom_interfaces/PoseLandmark', msg);
     }
 
+    function sendHands(rHands){
+      const msg = buildHandMsg(rHands);
+      if(msg) publish(el.handTopic.value.trim(), 'custom_interfaces/HandLandmark', msg);
+    }
+
+    // ---- app lifecycle ----
     async function start(){
       if(running) return;
-      await ensureModel();
-      stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'}, audio:false});
+      setStatus('loading models');
+      await ensureModels();
+      const streamConstraints = { video:{ facingMode:'user' }, audio:false };
+      stream = await navigator.mediaDevices.getUserMedia(streamConstraints);
       el.video.srcObject = stream; await el.video.play();
       el.overlay.width = el.video.videoWidth; el.overlay.height = el.video.videoHeight;
       running = true; el.start.disabled = true; el.stop.disabled = false; setStatus('running');
@@ -251,23 +301,25 @@
       wsClose();
     }
 
+    // ---- tests ----
     const quickHead = async(url)=>{ try{ const r=await fetch(url,{headers:{Range:'bytes=0-0'}}); return r.ok||r.status===206 }catch{ return false } };
-    async function testUrls(){ el.log.textContent=''; for(const k of ['lite','full','heavy']){ const u=buildModelURL(k); const ok=await quickHead(u); log(`${k}: ${u}`, ok?'ok':'err') } }
+    async function testUrls(){ el.log.textContent='';
+      for(const k of ['lite','full','heavy']){ const u=buildPoseURL(k); const ok=await quickHead(u); log(`pose ${k}: ${u}`, ok?'ok':'err') }
+      const okH = await quickHead(HAND_MODEL_URL); log(`hands: ${HAND_MODEL_URL}`, okH?'ok':'err');
+    }
     const mk=()=>({x:Math.random(),y:Math.random(),z:(Math.random()-0.5)*0.1,visibility:1,presence:1});
     const mkW=()=>({x:(Math.random()-0.5)*2,y:Math.random()*2,z:(Math.random()-0.5)*2,visibility:1});
-    const fakeResults=()=>({landmarks:[Array.from({length:33},mk)],worldLandmarks:[Array.from({length:33},mkW)]});
-    const expect=(c,m)=>log((c?'PASS: ':'FAIL: ')+m, c?'ok':'err');
-    function testPayloadV2(){ frameId=0; const p=buildPayload(fakeResults()); expect(p && p.schema==='pose.v2' && p.tracker==='mediapipe-pose' && typeof p.frame_id==='number' && p.source?.width!==undefined && p.quality?.avg_visibility!==undefined, 'v2 payload shape with metadata'); }
-    function testRate(){ const old=SEND_HZ; handleServerMessage({warning:'backpressure', queued:250}); expect(SEND_HZ<old,'backpressure lowers rate'); handleServerMessage({type:'rate', hz:12}); expect(SEND_HZ===12,'server rate sets exact Hz'); }
+    const fakePose=()=>({landmarks:[Array.from({length:33},mk)],worldLandmarks:[Array.from({length:33},mkW)]});
+    function testPayloadV2(){ const msg = buildPoseMsg(fakePose()); const ok = !!msg && Array.isArray(msg.label) && Array.isArray(msg.point) && msg.point.length>0; log((ok?'PASS: ':'FAIL: ')+'pose msg schema', ok?'ok':'err'); }
 
+    // ---- wiring ----
     $('testUrls').addEventListener('click', testUrls);
     $('testPayloadV2').addEventListener('click', testPayloadV2);
-    $('testRate').addEventListener('click', testRate);
-    $('runAll').addEventListener('click', ()=>{ testUrls(); testPayloadV2(); testRate() });
+    $('runAll').addEventListener('click', ()=>{ testUrls(); testPayloadV2(); })
 
     el.start.addEventListener('click', start);
     el.stop.addEventListener('click', stop);
-    el.model.addEventListener('change', async()=>{ if(landmarker){landmarker.close?.(); landmarker=null} await createLandmarker(el.model.value) });
+    el.model.addEventListener('change', async()=>{ if(poseLM){poseLM.close?.(); poseLM=null} await createPose(el.model.value) });
     el.wsEnable.addEventListener('change',()=>{ if(el.wsEnable.checked && running) wsConnect(); else wsClose() });
   </script>
 </body>
