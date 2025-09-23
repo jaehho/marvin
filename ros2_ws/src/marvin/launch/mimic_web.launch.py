@@ -31,9 +31,6 @@ def generate_launch_description():
         # rosbridge websocket
         rosbridge_launch,
 
-        # Pose detection node
-        Node(package=package_name, executable='poseDetection', output='screen'),
-
         # Pose Display node
         Node(package=package_name, executable='poseDisplay', output='screen'),
 

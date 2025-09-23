@@ -15,93 +15,76 @@
     .grid{display:grid;grid-template-columns:1fr;gap:12px}
     @media(min-width:980px){.grid{grid-template-columns:7fr 4fr}}
     .row{display:flex;gap:8px;align-items:center}
-    .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
-    .chip{background:var(--panel);padding:8px 10px;border-radius:12px;display:flex;gap:8px;align-items:center;border:1px solid #1d2836}
+
+    .toolbar{background:var(--panel);border:1px solid #1d2836;border-radius:12px}
+    .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px}
+    .chip{background:#0d1520;padding:8px 10px;border-radius:12px;display:flex;gap:8px;align-items:center;border:1px solid #1d2836}
     .chip label{font-size:12px;color:var(--muted)}
-    select,input{background:transparent;color:var(--ink);border:1px solid #1d2a3e;border-radius:8px;padding:4px 6px}
+    select,input{background:#000;color:var(--ink);border:1px solid #1d2a3e;border-radius:8px;padding:4px 6px}
     .btn{cursor:pointer;background:var(--accent);border:0;color:#021d2b;padding:9px 12px;border-radius:10px;font-weight:600}
-    .btn.secondary{background:#192539;color:var(--ink);border:1px solid #23344b}
     .btn:disabled{opacity:.5;cursor:not-allowed}
+    .toggle{appearance:none;width:40px;height:20px;background:#23344b;border-radius:999px;position:relative;cursor:pointer;outline:none;border:1px solid #1d2836}
+    .toggle:checked{background:var(--accent)}
+    .toggle::before{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;background:#fff;border-radius:50%;transition:.2s}
+    .toggle:checked::before{left:22px}
+
     .stage{position:relative;background:#05080c;border:1px solid #142034;border-radius:16px;overflow:hidden;margin-top:12px}
     video,canvas{display:block;width:100%;height:auto}
     #overlay{position:absolute;left:0;top:0}
-    .hud{position:absolute;left:10px;bottom:10px;background:rgba(10,16,24,.6);backdrop-filter:blur(6px);padding:8px 10px;border-radius:10px;border:1px solid #1a2a41;color:var(--muted)}
     .pill{padding:2px 8px;border-radius:999px;border:1px solid #234162;color:#aad3ff}
+
     fieldset{margin:0;border:1px solid #1d2a3e;border-radius:12px;padding:10px}
-    legend{color:var(--muted);padding:0 6px;font-size:12px}
+    legend{color:var(--muted);padding:0 6px;font-size:13px;letter-spacing:.2px}
     .kv{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px}
     .kv div:nth-child(odd){color:var(--muted)}
-    details{background:#0c131d;border:1px solid #1b2940;border-radius:12px;padding:8px 10px}
-    .log{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;white-space:pre-wrap;background:#0a1018;border:1px solid #1a2942;border-radius:8px;padding:8px;color:#b9c7da;max-height:260px;overflow:auto}
-    .ok{color:var(--ok)}.warn{color:var(--warn)}.err{color:var(--err)}
+    .kv div:nth-child(even){color:#e6edf7}
   </style>
 </head>
 <body>
   <div class="wrap">
     <header>
-      <h1>MediaPipe Pose & Hands → rosbridge</h1>
-      <div class="row"><span class="pill" id="status">idle</span></div>
+      <h1>MediaPipe Pose & Hands > rosbridge</h1>
+      <div class="row"><span class="pill" id="status">stopped</span></div>
     </header>
 
     <div class="grid">
       <div>
-        <div class="controls">
-          <button id="startBtn" class="btn">Start camera</button>
-          <button id="stopBtn" class="btn secondary" disabled>Stop</button>
-          <div class="chip"><label for="modelSel">pose model</label>
-            <select id="modelSel">
-              <option value="lite">lite</option>
-              <option value="full">full</option>
-              <option value="heavy">heavy</option>
-            </select>
+        <details class="toolbar" open>
+          <summary style="padding:10px 12px;cursor:pointer;color:#b5c6dc">Controls</summary>
+          <div class="controls">
+            <button id="camBtn" class="btn">Start camera</button>
+            <div class="chip"><label for="modelSel">pose model</label>
+              <select id="modelSel">
+                <option value="lite">lite</option>
+                <option value="full">full</option>
+                <option value="heavy">heavy</option>
+              </select>
+            </div>
+            <div class="chip"><label for="wsEnable">stream</label>
+              <input id="wsEnable" type="checkbox" class="toggle" disabled />
+            </div>
           </div>
-          <div class="chip"><label for="wsUrl">rosbridge</label>
-            <input id="wsUrl" value="wss://api.jaehho.com" style="width:260px" />
-          </div>
-          <div class="chip"><label for="poseTopic">pose topic</label>
-            <input id="poseTopic" value="pose_landmarks" style="width:160px" />
-          </div>
-          <div class="chip"><label for="handTopic">hand topic</label>
-            <input id="handTopic" value="hand_landmarks" style="width:160px" />
-          </div>
-          <div class="chip"><label for="wsEnable">stream</label>
-            <input id="wsEnable" type="checkbox" />
-          </div>
-        </div>
+        </details>
 
         <div class="stage">
           <video id="video" playsinline muted></video>
           <canvas id="overlay"></canvas>
-          <div class="hud">
-            <div class="row" style="gap:12px">
-              <span>FPS: <strong id="fps">0</strong></span>
-              <span>Latency: <strong id="lat">0</strong> ms</span>
-              <span>WS: <strong id="wsState">off</strong></span>
-            </div>
-          </div>
         </div>
       </div>
 
       <div>
         <fieldset>
-          <legend>Pose data</legend>
+          <legend>ROSBridge info</legend>
           <div class="kv">
-            <div>poses</div><div id="poseCount">0</div>
-            <div>left elbow</div><div id="leftElbow">-</div>
-            <div>right elbow</div><div id="rightElbow">-</div>
-            <div>z avg</div><div id="zAvg">-</div>
+            <div>rosbridge</div><div>wss://api.jaehho.com</div>
+            <div>pose topic</div><div>pose_landmarks</div>
+            <div>hand topic</div><div>hand_landmarks</div>
+            <div>FPS</div><div id="fps">0</div>
+            <div>Latency</div><div id="lat">0 ms</div>
           </div>
         </fieldset>
 
-        <details style="margin-top:12px">
-          <summary>Diagnostics & tests</summary>
-          <div class="row" style="gap:8px;margin:8px 0">
-            <button id="testUrls" class="btn secondary">Check model URLs</button>
-            <button id="testPayloadV2" class="btn secondary">Test payload (v2)</button>
-            <button id="runAll" class="btn">Run tests</button>
-          </div>
-          <div class="log" id="log"></div>
-        </details>
+        <!-- WebSocket info and latency graph removed as requested -->
       </div>
     </div>
   </div>
@@ -109,30 +92,73 @@
   <script type="module">
     import { FilesetResolver, PoseLandmarker, HandLandmarker, DrawingUtils } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest";
 
+    const WS_URL = 'wss://api.jaehho.com';
+    const POSE_TOPIC = 'pose_landmarks';
+    const HAND_TOPIC = 'hand_landmarks';
+
     const $ = (id)=>document.getElementById(id);
     const el = {
       video: $('video'), overlay: $('overlay'),
-      start: $('startBtn'), stop: $('stopBtn'), model: $('modelSel'),
-      fps: $('fps'), lat: $('lat'), status: $('status'), wsState: $('wsState'),
-      poseCount: $('poseCount'), leftElbow: $('leftElbow'), rightElbow: $('rightElbow'), zAvg: $('zAvg'),
-      wsUrl: $('wsUrl'), wsEnable: $('wsEnable'),
-      poseTopic: $('poseTopic'), handTopic: $('handTopic'),
-      log: $('log')
+      camBtn: $('camBtn'), model: $('modelSel'),
+      fps: $('fps'), lat: $('lat'), status: $('status'),
+      wsEnable: $('wsEnable')
+      // WebSocket detail elements removed
     };
     const ctx = el.overlay.getContext('2d');
 
-    let fileset, poseLM, handLM, stream, running=false, rafId=null;
+    let fileset, poseLM, handLM, stream, running=false;
     let lastTs=performance.now(), frames=0;
-    let ws=null, lastSend=0, SEND_HZ=30, frameId=0;
+    let ws=null, lastSend=0, SEND_HZ=30;
+    let apiOk=false, hbTimer=null, svcSeq=0, pending=null;
 
-    // Models
     const MP_BASE = 'https://storage.googleapis.com/mediapipe-models';
     const poseKeyToDir = { lite:'pose_landmarker_lite', full:'pose_landmarker_full', heavy:'pose_landmarker_heavy' };
     const buildPoseURL = (key)=>`${MP_BASE}/pose_landmarker/${poseKeyToDir[key]}/float16/1/${poseKeyToDir[key]}.task`;
     const HAND_MODEL_URL = `${MP_BASE}/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task`;
 
-    const log = (msg,cls='')=>{const p=document.createElement('div');p.className=cls;p.textContent=msg;el.log.appendChild(p);el.log.scrollTop=el.log.scrollHeight};
+    // --- message builders ---
+    const POSE_LABELS = {11:'left_shoulder',12:'right_shoulder',13:'left_elbow',14:'right_elbow',15:'left_wrist',16:'right_wrist',23:'left_hip',24:'right_hip'};
+    function buildPoseMsg(resultsPose){
+      const wl = resultsPose?.worldLandmarks?.[0];
+      if(!wl) return null;
+      const msg = { label: [], point: [] };
+      for(const i of Object.keys(POSE_LABELS)){
+        const idx=Number(i); const p=wl[idx]; if(!p) continue;
+        msg.label.push(POSE_LABELS[idx]);
+        msg.point.push({x:+p.x, y:+p.y, z:+p.z});
+      }
+      return (msg.point.length? msg : null);
+    }
+    function handIsOpen(lm){
+      const d=(i,j)=>{ const a=lm[i], b=lm[j]; return Math.hypot(a.x-b.x,a.y-b.y,a.z-b.z); };
+      const wrist=0, mcp=9, tips=[4,8,12,16,20];
+      const ref=d(wrist,mcp);
+      const closed=tips.reduce((acc,t)=>acc+(d(wrist,t)<ref?1:0),0);
+      return (closed<3);
+    }
+    function buildHandMsg(resultsHands){
+      const hands = resultsHands?.landmarks||[]; if(!hands.length) return null;
+      const msg = { label: [], status: [] };
+      const handed = resultsHands.handedness||[];
+      for(let i=0;i<hands.length;i++){
+        const label=(handed[i]?.[0]?.categoryName||'unknown').toLowerCase()+"_hand";
+        msg.label.push(label);
+        msg.status.push(!!handIsOpen(hands[i]));
+      }
+      return (msg.label.length? msg : null);
+    }
+
+    // --- publisher ---
+    function publish(topic, msg){
+      if(!ws || ws.readyState!==WebSocket.OPEN) return;
+      try{ ws.send(JSON.stringify({op:'publish', topic, msg})); }
+      catch(e){ /* ignore publish errors */ }
+    }
+
     const setStatus = (s)=>{ el.status.textContent=s };
+    const nowStr = ()=> new Date().toLocaleTimeString();
+    const setWsInfo = (state, evt=null, err=null)=>{ /* UI removed */ };
+    const refreshStatus = ()=>{ setStatus(!running? 'stopped' : (apiOk? 'streaming' : 'recording')); };
 
     const ensureFileset = async()=> fileset ||= await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm");
 
@@ -140,9 +166,7 @@
       const fs = await ensureFileset();
       poseLM = await PoseLandmarker.createFromOptions(fs, {
         baseOptions:{ modelAssetPath: buildPoseURL(key) },
-        runningMode:'VIDEO', numPoses:1,
-        minPoseDetectionConfidence:0.5, minPosePresenceConfidence:0.5, minTrackingConfidence:0.5,
-        smoothLandmarks:true, outputSegmentationMasks:false
+        runningMode:'VIDEO', numPoses:1
       });
     }
 
@@ -150,15 +174,13 @@
       const fs = await ensureFileset();
       handLM = await HandLandmarker.createFromOptions(fs, {
         baseOptions:{ modelAssetPath: HAND_MODEL_URL },
-        runningMode:'VIDEO', numHands:2,
-        minHandDetectionConfidence:0.5, minHandPresenceConfidence:0.5, minTrackingConfidence:0.5
+        runningMode:'VIDEO', numHands:2
       });
     }
 
     const ensureModels = async()=>{
       if(!poseLM) await createPose(el.model.value);
       if(!handLM) await createHands();
-      setStatus('models ready');
     };
 
     function draw(resultsPose, resultsHands){
@@ -172,155 +194,127 @@
 
     function updateStats(resultsPose,startTs){
       const now=performance.now();
-      if(++frames && now-lastTs>=500){ el.fps.textContent=String(Math.round((frames*1000)/(now-lastTs))); frames=0; lastTs=now; }
-      el.lat.textContent=String(Math.round(now-startTs));
-      const poses=resultsPose?.landmarks?.length||0; el.poseCount.textContent=String(poses);
-      if(poses){
-        const lm=resultsPose.landmarks[0];
-        const f=(n)=>n.toFixed(3);
-        el.leftElbow.textContent=`(${f(lm[13].x)}, ${f(lm[13].y)}, ${f(lm[13].z)})`;
-        el.rightElbow.textContent=`(${f(lm[14].x)}, ${f(lm[14].y)}, ${f(lm[14].z)})`;
-        el.zAvg.textContent=(lm.reduce((a,p)=>a+p.z,0)/lm.length).toFixed(3);
-      } else { el.leftElbow.textContent=el.rightElbow.textContent=el.zAvg.textContent='-'; }
+      if(++frames && now-lastTs>=500){ const fps=Math.round((frames*1000)/(now-lastTs)); el.fps.textContent=String(fps); frames=0; lastTs=now; }
+      const lat=Math.round(now-startTs); el.lat.textContent=lat+" ms";
     }
 
     async function loop(){
       if(!running) return;
       const ts=performance.now();
       let rPose={}, rHands={};
-      try{ rPose=await poseLM.detectForVideo(el.video,ts);}catch(err){log(`pose detect error: ${err}`,'err');}
-      try{ rHands=await handLM.detectForVideo(el.video,ts);}catch(err){log(`hand detect error: ${err}`,'err');}
+      try{ rPose=await poseLM.detectForVideo(el.video,ts);}catch{}
+      try{ rHands=await handLM.detectForVideo(el.video,ts);}catch{}
       draw(rPose, rHands);
       updateStats(rPose,ts);
       if(ws?.readyState===WebSocket.OPEN){
         sendPose(rPose);
         sendHands(rHands);
       }
-      rafId=requestAnimationFrame(loop);
+      requestAnimationFrame(loop);
     }
 
-    // ---- rosbridge ----
+    // --- rosbridge confirm via rosapi, plus auto-off on failure ---
+    function callRosapiGetTime(timeoutMs=2000){
+      if(!ws || ws.readyState!==WebSocket.OPEN) return Promise.resolve(false);
+      return new Promise((resolve)=>{
+        const id = `svc_${Date.now()}_${svcSeq++}`;
+        pending = (m)=>{
+          if(m.op==='service_response' && m.id===id){ const ok = !!m.result; pending=null; resolve(ok); }
+        };
+        try{ ws.send(JSON.stringify({op:'call_service', service:'/rosapi/get_time', args:{}, id})); }
+        catch(e){ pending=null; resolve(false); }
+        setTimeout(()=>{ if(pending){ pending=null; resolve(false); } }, timeoutMs);
+      });
+    }
+
+    function startHeartbeat(){
+      stopHeartbeat();
+      hbTimer = setInterval(async()=>{
+        const ok = await callRosapiGetTime(1500);
+        apiOk = ok; refreshStatus();
+      }, 5000);
+    }
+    function stopHeartbeat(){ if(hbTimer){ clearInterval(hbTimer); hbTimer=null; } }
+
     function wsConnect(){
-      wsClose();
-      ws=new WebSocket(el.wsUrl.value.trim());
-      ws.onopen=()=>{
-        el.wsState.textContent='open'; log('WS open','ok');
-        // Advertise both topics with custom message types
-        try{ ws.send(JSON.stringify({ op:'advertise', topic: el.poseTopic.value.trim(), type:'custom_interfaces/PoseLandmark' })); log(`advertised ${el.poseTopic.value}`,'ok'); }catch(e){ log(`advertise pose err: ${e}`,'err'); }
-        try{ ws.send(JSON.stringify({ op:'advertise', topic: el.handTopic.value.trim(), type:'custom_interfaces/HandLandmark' })); log(`advertised ${el.handTopic.value}`,'ok'); }catch(e){ log(`advertise hand err: ${e}`,'err'); }
+      wsClose(); apiOk=false; refreshStatus();
+      try{ ws=new WebSocket(WS_URL); }
+      catch(e){ setWsInfo('error', 'constructor', String(e)); failStreamToggle(); return; }
+      setWsInfo('connecting', 'connecting '+nowStr(), null);
+      ws.onmessage=(ev)=>{ try{ const m=JSON.parse(ev.data); if(pending) pending(m); }catch{} };
+      ws.onopen=async()=>{
+        setWsInfo('open', 'open '+nowStr(), null);
+        const ok = await callRosapiGetTime(2000);
+        if(ok){
+          apiOk=true;
+          try{ ws.send(JSON.stringify({ op:'advertise', topic: POSE_TOPIC, type:'custom_interfaces/PoseLandmark' })); }catch{}
+          try{ ws.send(JSON.stringify({ op:'advertise', topic: HAND_TOPIC, type:'custom_interfaces/HandLandmark' })); }catch{}
+          startHeartbeat();
+        } else {
+          apiOk=false; setWsInfo('error','rosapi timeout '+nowStr(),'no service response'); failStreamToggle();
+        }
+        refreshStatus();
       };
-      ws.onclose=()=>{ el.wsState.textContent='closed'; log('WS closed','warn') };
-      ws.onerror=(e)=>log(`WS error ${e?.message||''}`,'err');
-      ws.onmessage=(ev)=>{ try{ const m=JSON.parse(ev.data); if(m?.op) log(`← ${m.op}`); }catch{} };
+      ws.onerror=(e)=>{ setWsInfo('error','error '+nowStr(), e?.message||'error'); failStreamToggle(); refreshStatus(); };
+      ws.onclose=()=>{ setWsInfo('closed','close '+nowStr(), null); apiOk=false; stopHeartbeat(); failStreamToggle(false); refreshStatus(); };
     }
 
     function wsClose(){
-      if(ws && ws.readyState===WebSocket.OPEN){
-        try{ ws.send(JSON.stringify({ op:'unadvertise', topic: el.poseTopic.value.trim() })); }catch{}
-        try{ ws.send(JSON.stringify({ op:'unadvertise', topic: el.handTopic.value.trim() })); }catch{}
-      }
+      stopHeartbeat();
       try{ ws?.close(); }catch{}
-      ws=null;
+      ws=null; apiOk=false; setWsInfo('closed','closed '+nowStr(), null); refreshStatus();
     }
 
-    // ---- payload builders ----
-    const POSE_LABELS = {11:'left_shoulder',12:'right_shoulder',13:'left_elbow',14:'right_elbow',15:'left_wrist',16:'right_wrist',23:'left_hip',24:'right_hip'};
-
-    function buildPoseMsg(resultsPose){
-      const wl = resultsPose?.worldLandmarks?.[0];
-      if(!wl) return null;
-      const msg = { label: [], point: [] };
-      for(const idxStr of Object.keys(POSE_LABELS)){
-        const idx = Number(idxStr); const p = wl[idx]; if(!p) continue;
-        msg.label.push(POSE_LABELS[idx]);
-        msg.point.push({ x:+p.x, y:+p.y, z:+p.z }); // geometry_msgs/Point
-      }
-      return msg;
-    }
-
-    function handIsOpen(lm){
-      const d=(i,j)=>{ const p=lm[i], q=lm[j]; return Math.hypot(p.x-q.x, p.y-q.y, p.z-q.z); };
-      const wrist=0, mcp=9, tips=[4,8,12,16,20];
-      const ref = d(wrist,mcp);
-      const closed = tips.reduce((acc,t)=> acc + (d(wrist,t) < ref ? 1:0), 0);
-      return (closed < 3);
-    }
-
-    function buildHandMsg(resultsHands){
-      const hands = resultsHands?.landmarks || [];
-      if(!hands.length) return null;
-      const msg = { label: [], status: [] };
-      const handedness = resultsHands.handedness || [];
-      for(let i=0;i<hands.length;i++){
-        const label = (handedness[i]?.[0]?.categoryName||'unknown').toLowerCase()+"_hand";
-        msg.label.push(label);
-        msg.status.push(!!handIsOpen(hands[i]));
-      }
-      return msg;
-    }
-
-    // ---- publishers ----
-    function publish(topic, type, msg){
-      if(!ws || ws.readyState!==WebSocket.OPEN) return;
-      try{ ws.send(JSON.stringify({ op:'publish', topic, msg })); }
-      catch(e){ log(`publish error: ${e}`,'err'); }
+    function failStreamToggle(hard=true){
+      // Auto switch off the UI toggle on WS failures
+      el.wsEnable.checked = false; if(hard) el.wsEnable.blur();
     }
 
     function sendPose(rPose){
       const now=performance.now();
       if(now-lastSend<1000/SEND_HZ) return;
       lastSend=now;
-      const msg = buildPoseMsg(rPose);
-      if(msg) publish(el.poseTopic.value.trim(), 'custom_interfaces/PoseLandmark', msg);
+      if(!apiOk) return; // only when confirmed
+      const msg=buildPoseMsg(rPose);
+      if(msg) publish(POSE_TOPIC, msg);
     }
-
     function sendHands(rHands){
-      const msg = buildHandMsg(rHands);
-      if(msg) publish(el.handTopic.value.trim(), 'custom_interfaces/HandLandmark', msg);
+      if(!apiOk) return;
+      const msg=buildHandMsg(rHands);
+      if(msg) publish(HAND_TOPIC, msg);
     }
 
-    // ---- app lifecycle ----
     async function start(){
       if(running) return;
-      setStatus('loading models');
       await ensureModels();
       const streamConstraints = { video:{ facingMode:'user' }, audio:false };
       stream = await navigator.mediaDevices.getUserMedia(streamConstraints);
       el.video.srcObject = stream; await el.video.play();
       el.overlay.width = el.video.videoWidth; el.overlay.height = el.video.videoHeight;
-      running = true; el.start.disabled = true; el.stop.disabled = false; setStatus('running');
+      running = true; el.camBtn.textContent='Stop camera';
+      el.wsEnable.disabled = false;
       if(el.wsEnable.checked) wsConnect();
+      refreshStatus();
       loop();
     }
 
     function stop(){
-      running = false; cancelAnimationFrame(rafId);
+      running = false;
       stream?.getTracks().forEach(t=>t.stop()); stream=null;
-      el.start.disabled=false; el.stop.disabled=true; setStatus('stopped');
+      el.camBtn.textContent='Start camera';
+      el.wsEnable.disabled = true; el.wsEnable.checked=false;
       ctx.clearRect(0,0,el.overlay.width,el.overlay.height);
       wsClose();
+      refreshStatus();
     }
 
-    // ---- tests ----
-    const quickHead = async(url)=>{ try{ const r=await fetch(url,{headers:{Range:'bytes=0-0'}}); return r.ok||r.status===206 }catch{ return false } };
-    async function testUrls(){ el.log.textContent='';
-      for(const k of ['lite','full','heavy']){ const u=buildPoseURL(k); const ok=await quickHead(u); log(`pose ${k}: ${u}`, ok?'ok':'err') }
-      const okH = await quickHead(HAND_MODEL_URL); log(`hands: ${HAND_MODEL_URL}`, okH?'ok':'err');
-    }
-    const mk=()=>({x:Math.random(),y:Math.random(),z:(Math.random()-0.5)*0.1,visibility:1,presence:1});
-    const mkW=()=>({x:(Math.random()-0.5)*2,y:Math.random()*2,z:(Math.random()-0.5)*2,visibility:1});
-    const fakePose=()=>({landmarks:[Array.from({length:33},mk)],worldLandmarks:[Array.from({length:33},mkW)]});
-    function testPayloadV2(){ const msg = buildPoseMsg(fakePose()); const ok = !!msg && Array.isArray(msg.label) && Array.isArray(msg.point) && msg.point.length>0; log((ok?'PASS: ':'FAIL: ')+'pose msg schema', ok?'ok':'err'); }
-
-    // ---- wiring ----
-    $('testUrls').addEventListener('click', testUrls);
-    $('testPayloadV2').addEventListener('click', testPayloadV2);
-    $('runAll').addEventListener('click', ()=>{ testUrls(); testPayloadV2(); })
-
-    el.start.addEventListener('click', start);
-    el.stop.addEventListener('click', stop);
+    el.camBtn.addEventListener('click',()=>{ running? stop(): start(); });
     el.model.addEventListener('change', async()=>{ if(poseLM){poseLM.close?.(); poseLM=null} await createPose(el.model.value) });
-    el.wsEnable.addEventListener('change',()=>{ if(el.wsEnable.checked && running) wsConnect(); else wsClose() });
+    el.wsEnable.addEventListener('change',()=>{ if(running){
+      if(el.wsEnable.checked){ wsConnect(); }
+      else{ wsClose(); }
+      refreshStatus();
+    }});
   </script>
 </body>
 </html>
