@@ -13,7 +13,7 @@ scale:
   joint: 0.5
 
 ## Properties of outgoing commands
-publish_period: 0.034  # 1/Nominal publish rate [seconds]
+publish_period: 0.004  # 1/Nominal publish rate [seconds]
 low_latency_mode: false  # Set this to true to publish as soon as an incoming Twist command is received (publish_period is ignored)
 
 # What type of topic does your robot driver expect?
@@ -26,7 +26,7 @@ publish_joint_velocities: true
 publish_joint_accelerations: false
 
 ## Incoming Joint State properties
-low_pass_filter_coeff: 2.0  # Larger --> trust the filtered data more, trust the measurements less.
+low_pass_filter_coeff: 0.5  # Larger --> trust the filtered data more, trust the measurements less.
 
 ## MoveIt properties
 move_group_name: left_arm  # Often 'manipulator' or 'arm'
@@ -56,14 +56,14 @@ command_out_topic: /left_arm_controller/joint_trajectory # Publish outgoing comm
 
 ## Collision checking for the entire robot body
 check_collisions: true # Check collisions?
-collision_check_rate: 10.0 # [Hz] Collision-checking can easily bog down a CPU if done too often.
+collision_check_rate: 50.0 # [Hz] Collision-checking can easily bog down a CPU if done too often.
 # Two collision check algorithms are available:
 # "threshold_distance" begins slowing down when nearer than a specified distance. Good if you want to tune collision thresholds manually.
 # "stop_distance" stops if a collision is nearer than the worst-case stopping distance and the distance is decreasing. Requires joint acceleration limits
 collision_check_type: threshold_distance
 # Parameters for "threshold_distance"-type collision checking
-self_collision_proximity_threshold: 0.01 # Start decelerating when a self-collision is this far [m]
-scene_collision_proximity_threshold: 0.02 # Start decelerating when a scene collision is this far [m]
+self_collision_proximity_threshold: 0.03 # Start decelerating when a self-collision is this far [m]
+scene_collision_proximity_threshold: 0.03 # Start decelerating when a scene collision is this far [m]
 # Parameters for "stop_distance"-type collision checking
 collision_distance_safety_factor: 1000.0 # Must be >= 1. A large safety factor is recommended to account for latency
 min_allowable_collision_distance: 0.01 # Stop if a collision is closer than this [m]
