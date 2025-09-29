@@ -1,7 +1,7 @@
 controller_manager:
   ros__parameters:
     use_sim_time: True
-    update_rate: 100  # Hz
+    update_rate: 400  # Hz
 
     joint_state_broadcaster:
       type: joint_state_broadcaster/JointStateBroadcaster
@@ -38,7 +38,7 @@ left_arm_controller:
     state_publish_rate: 200.0
     action_monitor_rate: 20.0
 
-    allow_partial_joints_goal: false
+    allow_partial_joints_goal: true
     open_loop_control: true
     allow_integration_in_goal_trajectories: true
     constraints:
@@ -65,7 +65,7 @@ right_arm_controller:
     state_publish_rate: 200.0
     action_monitor_rate: 20.0
 
-    allow_partial_joints_goal: false
+    allow_partial_joints_goal: true
     open_loop_control: true
     allow_integration_in_goal_trajectories: true
     constraints:
