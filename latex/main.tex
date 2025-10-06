@@ -359,6 +359,35 @@ these differences are multiplied by a gain and sent as a velocity command
 as a JointJog-type servoing message.
 
 \section{Website}
+We developed a web application to teleoperate the motion-tracking robot 
+directly from a browser. The system is designed to remove installation 
+barriers by combining MediaPipe Tasks Vision models with ROSBridge over 
+WebSockets. When a user enables the camera, the application streams video 
+frames into Pose Landmarker and Hand Landmarker models running in 
+WebAssembly. The pose model extracts 3D coordinates of major joints 
+(e.g., shoulders, elbows, wrists, hips), while the hand model estimates 
+handedness and open/closed state of each hand. Results are visualized in 
+real time using a canvas overlay, providing immediate feedback on the 
+detected skeleton and hand gestures.
+
+The interface serializes these landmarks into structured messages containing 
+joint labels and coordinates (for pose) and binary states (for hand openness).
+Messages are transmitted through ROSBridge to topics \texttt{pose\_landmarks} 
+and \texttt{hand\_landmarks} using the ROS publish API. A lightweight heartbeat 
+mechanism calls on the \texttt{/rosapi/get\_time} service to confirm connectivity 
+and disable streaming automatically on failures, ensuring robust operation 
+during live sessions.
+
+The user interface emphasizes minimal configuration. A control toolbar provides 
+buttons to start/stop the camera, toggle ROS streaming, and select between 
+\texttt{lite}, \texttt{full}, and \texttt{heavy} pose models, balancing accuracy 
+with computational load. The system also reports frame rate and per-frame latency, 
+allowing operators to monitor performance. Because the entire pipeline executes 
+client-side in the browser, no GPU drivers or native ROS tools are required on the 
+user device. This enables rapid deployment on commodity hardware and makes the 
+interface suitable for demonstrations, classroom use, and distributed teleoperation 
+scenarios.
+
 
 \section{Operation and User Study}
 MARVIN was tested in both local and remote operation scenarios utilizing
