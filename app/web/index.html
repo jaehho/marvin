@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MediaPipe Pose & Hands — ROSBridge</title>
+  <style>
+    :root{--bg:#0b0f14;--panel:#111823;--ink:#d9e1ee;--muted:#8aa0b6;--accent:#5bbcff;--ok:#3bd671;--warn:#ffcc66;--err:#ff7a7a}
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;background:linear-gradient(180deg,#0b0f14,#0e141d);color:var(--ink);font:14px/1.4 system-ui,Segoe UI,Roboto,Helvetica,Arial}
+    .wrap{max-width:1200px;margin:0 auto;padding:20px}
+    header{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:12px}
+    h1{font-size:18px;margin:0;font-weight:600}
+    .grid{display:grid;grid-template-columns:1fr;gap:12px}
+    @media(min-width:980px){.grid{grid-template-columns:7fr 4fr}}
+    .row{display:flex;gap:8px;align-items:center}
+
+    .toolbar{background:var(--panel);border:1px solid #1d2836;border-radius:12px}
+    .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px}
+    .chip{background:#0d1520;padding:8px 10px;border-radius:12px;display:flex;gap:8px;align-items:center;border:1px solid #1d2836}
+    .chip label{font-size:12px;color:var(--muted)}
+    select,input{background:#000;color:var(--ink);border:1px solid #1d2a3e;border-radius:8px;padding:4px 6px}
+    .btn{cursor:pointer;background:var(--accent);border:0;color:#021d2b;padding:9px 12px;border-radius:10px;font-weight:600}
+    .btn:disabled{opacity:.5;cursor:not-allowed}
+    .toggle{appearance:none;width:40px;height:20px;background:#23344b;border-radius:999px;position:relative;cursor:pointer;outline:none;border:1px solid #1d2836}
+    .toggle:checked{background:var(--accent)}
+    .toggle::before{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;background:#fff;border-radius:50%;transition:.2s}
+    .toggle:checked::before{left:22px}
+
+    .stage{position:relative;background:#05080c;border:1px solid #142034;border-radius:16px;overflow:hidden;margin-top:12px}
+    video,canvas{display:block;width:100%;height:auto}
+    #overlay{position:absolute;left:0;top:0}
+    .pill{padding:2px 8px;border-radius:999px;border:1px solid #234162;color:#aad3ff}
+
+    fieldset{margin:0;border:1px solid #1d2a3e;border-radius:12px;padding:10px}
+    legend{color:var(--muted);padding:0 6px;font-size:13px;letter-spacing:.2px}
+    .kv{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px}
+    .kv div:nth-child(odd){color:var(--muted)}
+    .kv div:nth-child(even){color:#e6edf7}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>MediaPipe Pose & Hands > rosbridge</h1>
+      <div class="row"><span class="pill" id="status">stopped</span></div>
+    </header>
+
+    <div class="grid">
+      <div>
+        <details class="toolbar" open>
+          <summary style="padding:10px 12px;cursor:pointer;color:#b5c6dc">Controls</summary>
+          <div class="controls">
+            <button id="camBtn" class="btn">Start camera</button>
+            <div class="chip"><label for="modelSel">pose model</label>
+              <select id="modelSel">
+                <option value="lite">lite</option>
+                <option value="full">full</option>
+                <option value="heavy">heavy</option>
+              </select>
+            </div>
+            <div class="chip"><label for="wsEnable">stream</label>
+              <input id="wsEnable" type="checkbox" class="toggle" disabled />
+            </div>
+          </div>
+        </details>
+
+        <div class="stage">
+          <video id="video" playsinline muted></video>
+          <canvas id="overlay"></canvas>
+        </div>
+      </div>
+
+      <div>
+        <fieldset>
+          <legend>ROSBridge info</legend>
+          <div class="kv">
+            <div>rosbridge</div><div>wss://api.jaehho.com</div>
+            <div>pose topic</div><div>pose_landmarks</div>
+            <div>hand topic</div><div>hand_landmarks</div>
+            <div>FPS</div><div id="fps">0</div>
+            <div>Latency</div><div id="lat">0 ms</div>
+          </div>
+        </fieldset>
+      </div>
+    </div>
+    <!-- marvin livestream embed -->
+    <div class="stage" style="margin-top:20px">
+      <iframe width="560" height="315"
+        src="https://www.youtube.com/embed/daOtDSlTO3s?autoplay=1&mute=1"
+        title="YouTube live"
+        frameborder="0"
+        allow="autoplay; encrypted-media"
+        allowfullscreen>
+      </iframe>
+    </div>
+  </div>
+
+  <script type="module">
+    import { FilesetResolver, PoseLandmarker, HandLandmarker, DrawingUtils } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest";
+
+    const WS_URL = 'wss://api.jaehho.com';
+    const POSE_TOPIC = 'pose_landmarks';
+    const HAND_TOPIC = 'hand_landmarks';
+
+    const $ = (id)=>document.getElementById(id);
+    const el = {
+      video: $('video'), overlay: $('overlay'),
+      camBtn: $('camBtn'), model: $('modelSel'),
+      fps: $('fps'), lat: $('lat'), status: $('status'),
+      wsEnable: $('wsEnable')
+      // WebSocket detail elements removed
+    };
+    const ctx = el.overlay.getContext('2d');
+
+    let fileset, poseLM, handLM, stream, running=false;
+    let lastTs=performance.now(), frames=0;
+    let ws=null, lastSend=0, SEND_HZ=30;
+    let apiOk=false, hbTimer=null, svcSeq=0, pending=null;
+
+    const MP_BASE = 'https://storage.googleapis.com/mediapipe-models';
+    const poseKeyToDir = { lite:'pose_landmarker_lite', full:'pose_landmarker_full', heavy:'pose_landmarker_heavy' };
+    const buildPoseURL = (key)=>`${MP_BASE}/pose_landmarker/${poseKeyToDir[key]}/float16/1/${poseKeyToDir[key]}.task`;
+    const HAND_MODEL_URL = `${MP_BASE}/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task`;
+
+    // --- message builders ---
+    const POSE_LABELS = {11:'left_shoulder',12:'right_shoulder',13:'left_elbow',14:'right_elbow',15:'left_wrist',16:'right_wrist',23:'left_hip',24:'right_hip'};
+    function buildPoseMsg(resultsPose){
+      const wl = resultsPose?.worldLandmarks?.[0];
+      if(!wl) return null;
+      const msg = { label: [], point: [] };
+      for(const i of Object.keys(POSE_LABELS)){
+        const idx=Number(i); const p=wl[idx]; if(!p) continue;
+        msg.label.push(POSE_LABELS[idx]);
+        msg.point.push({x:+p.x, y:+p.y, z:+p.z});
+      }
+      return (msg.point.length? msg : null);
+    }
+    function handIsOpen(lm){
+      const d=(i,j)=>{ const a=lm[i], b=lm[j]; return Math.hypot(a.x-b.x,a.y-b.y,a.z-b.z); };
+      const wrist=0, mcp=9, tips=[4,8,12,16,20];
+      const ref=d(wrist,mcp);
+      const closed=tips.reduce((acc,t)=>acc+(d(wrist,t)<ref?1:0),0);
+      return (closed<3);
+    }
+    function buildHandMsg(resultsHands){
+      const hands = resultsHands?.landmarks||[]; if(!hands.length) return null;
+      const msg = { label: [], status: [] };
+      const handed = resultsHands.handedness||[];
+      for(let i=0;i<hands.length;i++){
+        const label=(handed[i]?.[0]?.categoryName||'unknown').toLowerCase()+"_hand";
+        msg.label.push(label);
+        msg.status.push(!!handIsOpen(hands[i]));
+      }
+      return (msg.label.length? msg : null);
+    }
+
+    // --- publisher ---
+    function publish(topic, msg){
+      if(!ws || ws.readyState!==WebSocket.OPEN) return;
+      try{ ws.send(JSON.stringify({op:'publish', topic, msg})); }
+      catch(e){ /* ignore publish errors */ }
+    }
+
+    const setStatus = (s)=>{ el.status.textContent=s };
+    const nowStr = ()=> new Date().toLocaleTimeString();
+    const setWsInfo = (state, evt=null, err=null)=>{ /* UI removed */ };
+    const refreshStatus = ()=>{ setStatus(!running? 'stopped' : (apiOk? 'streaming' : 'recording')); };
+
+    const ensureFileset = async()=> fileset ||= await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm");
+
+    async function createPose(key){
+      const fs = await ensureFileset();
+      poseLM = await PoseLandmarker.createFromOptions(fs, {
+        baseOptions:{ modelAssetPath: buildPoseURL(key) },
+        runningMode:'VIDEO', numPoses:1
+      });
+    }
+
+    async function createHands(){
+      const fs = await ensureFileset();
+      handLM = await HandLandmarker.createFromOptions(fs, {
+        baseOptions:{ modelAssetPath: HAND_MODEL_URL },
+        runningMode:'VIDEO', numHands:2
+      });
+    }
+
+    const ensureModels = async()=>{
+      if(!poseLM) await createPose(el.model.value);
+      if(!handLM) await createHands();
+    };
+
+    function draw(resultsPose, resultsHands){
+      ctx.clearRect(0,0,el.overlay.width,el.overlay.height);
+      const utils=new DrawingUtils(ctx);
+      const lmPose=resultsPose?.landmarks||[];
+      for(const lm of lmPose){ utils.drawLandmarks(lm,{radius:2}); utils.drawConnectors(lm, PoseLandmarker.POSE_CONNECTIONS); }
+      const lmHands=resultsHands?.landmarks||[];
+      for(const lm of lmHands){ utils.drawLandmarks(lm,{radius:2}); utils.drawConnectors(lm, HandLandmarker.HAND_CONNECTIONS); }
+    }
+
+    function updateStats(resultsPose,startTs){
+      const now=performance.now();
+      if(++frames && now-lastTs>=500){ const fps=Math.round((frames*1000)/(now-lastTs)); el.fps.textContent=String(fps); frames=0; lastTs=now; }
+      const lat=Math.round(now-startTs); el.lat.textContent=lat+" ms";
+    }
+
+    async function loop(){
+      if(!running) return;
+      const ts=performance.now();
+      let rPose={}, rHands={};
+      try{ rPose=await poseLM.detectForVideo(el.video,ts);}catch{}
+      try{ rHands=await handLM.detectForVideo(el.video,ts);}catch{}
+      draw(rPose, rHands);
+      updateStats(rPose,ts);
+      if(ws?.readyState===WebSocket.OPEN){
+        sendPose(rPose);
+        sendHands(rHands);
+      }
+      requestAnimationFrame(loop);
+    }
+
+    // --- rosbridge confirm via rosapi, plus auto-off on failure ---
+    function callRosapiGetTime(timeoutMs=2000){
+      if(!ws || ws.readyState!==WebSocket.OPEN) return Promise.resolve(false);
+      return new Promise((resolve)=>{
+        const id = `svc_${Date.now()}_${svcSeq++}`;
+        pending = (m)=>{
+          if(m.op==='service_response' && m.id===id){ const ok = !!m.result; pending=null; resolve(ok); }
+        };
+        try{ ws.send(JSON.stringify({op:'call_service', service:'/rosapi/get_time', args:{}, id})); }
+        catch(e){ pending=null; resolve(false); }
+        setTimeout(()=>{ if(pending){ pending=null; resolve(false); } }, timeoutMs);
+      });
+    }
+
+    function startHeartbeat(){
+      stopHeartbeat();
+      hbTimer = setInterval(async()=>{
+        const ok = await callRosapiGetTime(1500);
+        apiOk = ok; refreshStatus();
+      }, 5000);
+    }
+    function stopHeartbeat(){ if(hbTimer){ clearInterval(hbTimer); hbTimer=null; } }
+
+    function wsConnect(){
+      wsClose(); apiOk=false; refreshStatus();
+      try{ ws=new WebSocket(WS_URL); }
+      catch(e){ setWsInfo('error', 'constructor', String(e)); failStreamToggle(); return; }
+      setWsInfo('connecting', 'connecting '+nowStr(), null);
+      ws.onmessage=(ev)=>{ try{ const m=JSON.parse(ev.data); if(pending) pending(m); }catch{} };
+      ws.onopen=async()=>{
+        setWsInfo('open', 'open '+nowStr(), null);
+        const ok = await callRosapiGetTime(2000);
+        if(ok){
+          apiOk=true;
+          try{ ws.send(JSON.stringify({ op:'advertise', topic: POSE_TOPIC, type:'custom_interfaces/PoseLandmark' })); }catch{}
+          try{ ws.send(JSON.stringify({ op:'advertise', topic: HAND_TOPIC, type:'custom_interfaces/HandLandmark' })); }catch{}
+          startHeartbeat();
+        } else {
+          apiOk=false; setWsInfo('error','rosapi timeout '+nowStr(),'no service response'); failStreamToggle();
+        }
+        refreshStatus();
+      };
+      ws.onerror=(e)=>{ setWsInfo('error','error '+nowStr(), e?.message||'error'); failStreamToggle(); refreshStatus(); };
+      ws.onclose=()=>{ setWsInfo('closed','close '+nowStr(), null); apiOk=false; stopHeartbeat(); failStreamToggle(false); refreshStatus(); };
+    }
+
+    function wsClose(){
+      stopHeartbeat();
+      try{ ws?.close(); }catch{}
+      ws=null; apiOk=false; setWsInfo('closed','closed '+nowStr(), null); refreshStatus();
+    }
+
+    function failStreamToggle(hard=true){
+      // Auto switch off the UI toggle on WS failures
+      el.wsEnable.checked = false; if(hard) el.wsEnable.blur();
+    }
+
+    function sendPose(rPose){
+      const now=performance.now();
+      if(now-lastSend<1000/SEND_HZ) return;
+      lastSend=now;
+      if(!apiOk) return; // only when confirmed
+      const msg=buildPoseMsg(rPose);
+      if(msg) publish(POSE_TOPIC, msg);
+    }
+    function sendHands(rHands){
+      if(!apiOk) return;
+      const msg=buildHandMsg(rHands);
+      if(msg) publish(HAND_TOPIC, msg);
+    }
+
+    async function start(){
+      if(running) return;
+      await ensureModels();
+      const streamConstraints = { video:{ facingMode:'user' }, audio:false };
+      stream = await navigator.mediaDevices.getUserMedia(streamConstraints);
+      el.video.srcObject = stream; await el.video.play();
+      el.overlay.width = el.video.videoWidth; el.overlay.height = el.video.videoHeight;
+      running = true; el.camBtn.textContent='Stop camera';
+      el.wsEnable.disabled = false;
+      if(el.wsEnable.checked) wsConnect();
+      refreshStatus();
+      loop();
+    }
+
+    function stop(){
+      running = false;
+      stream?.getTracks().forEach(t=>t.stop()); stream=null;
+      el.camBtn.textContent='Start camera';
+      el.wsEnable.disabled = true; el.wsEnable.checked=false;
+      ctx.clearRect(0,0,el.overlay.width,el.overlay.height);
+      wsClose();
+      refreshStatus();
+    }
+
+    el.camBtn.addEventListener('click',()=>{ running? stop(): start(); });
+    el.model.addEventListener('change', async()=>{ if(poseLM){poseLM.close?.(); poseLM=null} await createPose(el.model.value) });
+    el.wsEnable.addEventListener('change',()=>{ if(running){
+      if(el.wsEnable.checked){ wsConnect(); }
+      else{ wsClose(); }
+      refreshStatus();
+    }});
+  </script>
+</body>
+</html>
