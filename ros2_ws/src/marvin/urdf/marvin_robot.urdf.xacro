@@ -1,0 +1,98 @@
+<?xml version="1.0"?>
+<!-- Copied and modified from OMX -->
+<!-- Marvin Chain -->
+<robot name="marvin" xmlns:xacro="http://ros.org/wiki/xacro">
+  <xacro:arg name="prefix" default="" />
+  <xacro:arg name="use_sim" default="false" />
+  <xacro:arg name="use_fake_hardware" default="false" />
+  <xacro:arg name="fake_sensor_commands" default="false" />
+  <xacro:arg name="port_name_left" default="/dev/ttyUSB0" />
+  <xacro:arg name="port_name_right" default="/dev/ttyUSB1" />
+
+  <!-- Import Rviz colors -->
+  <xacro:include filename="$(find marvin)/urdf/materials.xacro" />
+
+  <!-- Import all Gazebo-customization elements, including Gazebo colors -->
+  <xacro:include filename="$(find marvin)/gazebo/open_manipulator_x.gazebo.xacro" />
+
+  <!-- Import Single Arm URDF -->
+  <xacro:include filename="$(find marvin)/urdf/single_arm.xacro" />
+  <!--xacro:include filename="$(find marvin)/urdf/marvin.urdf.xacro" /-->
+
+  <xacro:include filename="$(find marvin)/ros2_control/open_manipulator_x_system.ros2_control.xacro" />
+
+   <!-- World -->
+  <link name="world"/>
+
+  <!-- World fixed joint-->
+  <joint name="world_fixed" type="fixed">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <parent link="world"/>
+    <child link="torso"/>
+  </joint>
+
+  <!-- Torso Link -->
+  <link name="torso">
+    <collision name="Cube">
+      <origin rpy="0.00000 0.00000 0.00000" xyz="0.00000 0.00000 -0.22261"/>
+      <geometry>
+        <box size="0.16000 0.06000 0.60000"/>
+      </geometry>
+    </collision>
+    <visual name="Cube">
+      <origin rpy="0.00000 0.00000 0.00000" xyz="0.00000 0.00000 -0.22261"/>
+      <geometry>
+        <box size="0.16000 0.06000 0.60000"/>
+      </geometry>
+    </visual>
+    <parent link="world"/>
+  </link>
+
+  <xacro:property name="left_arm_origin_xyz" value="0.08 0 0"/>
+  <joint name="left_arm_joint" type="fixed">
+    <parent link="torso"/>
+    <child link="left_link1"/>
+    <origin xyz="${left_arm_origin_xyz}" rpy="0 1.5708 0"/>
+  </joint>
+
+  <xacro:property name="right_arm_origin_xyz" value="-0.08 0 0"/>
+  <joint name="right_arm_joint" type="fixed">
+    <parent link="torso"/>
+    <child link="right_link1"/>
+    <origin xyz="${right_arm_origin_xyz}" rpy="0 1.5708 3.1415926535"/> <!-- Rotate by pi -->
+  </joint>
+
+  <!-- Left Arm -->
+  <xacro:arm name="left"/>
+ 
+  <!-- Right Arm (Mirrored) -->
+  <xacro:arm name="right"/>
+  
+  <!-- Open Manipulator X Gazebo -->
+  <!--xacro:open_manipulator_x prefix="$(arg prefix)" /-->
+  <xacro:open_manipulator_x_gazebo side="left" />
+  <xacro:open_manipulator_x_gazebo side="right" />
+
+  <xacro:open_manipulator_x_system
+    name="left_arm_system" prefix="$(arg prefix)" 
+    side ="left"
+    use_sim="$(arg use_sim)"
+    use_fake_hardware="$(arg use_fake_hardware)"
+    fake_sensor_commands="$(arg fake_sensor_commands)"
+    port_name="$(arg port_name_left)"/>
+
+    <xacro:open_manipulator_x_system
+    name="right_arm_system" prefix="$(arg prefix)" 
+    side ="right"
+    use_sim="$(arg use_sim)"
+    use_fake_hardware="$(arg use_fake_hardware)"
+    fake_sensor_commands="$(arg fake_sensor_commands)"
+    port_name="$(arg port_name_right)"/>
+
+  <gazebo>
+    <plugin name="gazebo_ros2_control" filename="libgazebo_ros2_control.so">
+      <parameters>$(find marvin)/config/gazebo_controller_manager.yaml</parameters>
+    </plugin>
+  </gazebo>
+
+</robot>

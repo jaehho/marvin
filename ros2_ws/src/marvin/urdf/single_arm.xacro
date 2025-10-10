@@ -3,11 +3,11 @@
 
   <xacro:macro name="arm" params="name">
     <!-- Link 1 -->
-    <link name="link1_${name}">
+    <link name="${name}_link1">
       <visual>
         <origin xyz="0 0 0" rpy="0 0 0"/>
         <geometry>
-          <mesh filename="$(find marvin)/meshes/stl/chain_link1.stl" scale="0.001 0.001 0.001"/>
+          <mesh filename="package://marvin/meshes/stl/chain_link1.stl" scale="0.001 0.001 0.001"/>
         </geometry>
         <material name="grey"/>
       </visual>
@@ -15,7 +15,7 @@
       <collision>
         <origin xyz="0 0 0" rpy="0 0 0"/>
         <geometry>
-          <mesh filename="$(find marvin)/meshes/stl/chain_link1.stl" scale="0.001 0.001 0.001"/>
+          <mesh filename="package://marvin/meshes/stl/chain_link1.stl" scale="0.001 0.001 0.001"/>
         </geometry>
       </collision>
 
@@ -30,20 +30,20 @@
     </link>
 
     <!-- Joint 1 -->
-    <joint name="joint1_${name}" type="revolute">
-      <parent link="link1_${name}"/>
-      <child link="link2_${name}"/>
+    <joint name="${name}_joint1" type="revolute">
+      <parent link="${name}_link1"/>
+      <child link="${name}_link2"/>
       <origin xyz="0.012 0.0 0.017" rpy="0 0 0"/>
       <axis xyz="0 0 1"/>
       <limit velocity="4.8" effort="1" lower="${-pi*0.9}" upper="${pi*0.9}" />
     </joint>
 
     <!--  Link 2 -->
-    <link name="link2_${name}">
+    <link name="${name}_link2">
       <visual>
         <origin xyz="0 0 0.019" rpy="0 0 0"/>
         <geometry>
-          <mesh filename="$(find marvin)/meshes/stl/chain_link2.stl" scale="0.001 0.001 0.001"/>
+          <mesh filename="package://marvin/meshes/stl/chain_link2.stl" scale="0.001 0.001 0.001"/>
         </geometry>
         <material name="grey"/>
       </visual>
@@ -51,7 +51,7 @@
       <collision>
         <origin xyz="0 0 0.019" rpy="0 0 0"/>
         <geometry>
-          <mesh filename="$(find marvin)/meshes/stl/chain_link2.stl" scale="0.001 0.001 0.001"/>
+          <mesh filename="package://marvin/meshes/stl/chain_link2.stl" scale="0.001 0.001 0.001"/>
         </geometry>
       </collision>
 
@@ -65,20 +65,20 @@
     </link>
 
     <!--  Joint 2 -->
-    <joint name="joint2_${name}" type="revolute">
-      <parent link="link2_${name}"/>
-      <child link="link3_${name}"/>
+    <joint name="${name}_joint2" type="revolute">
+      <parent link="${name}_link2"/>
+      <child link="${name}_link3"/>
       <origin xyz="0.0 0.0 0.0595" rpy="0 0 0"/>
       <axis xyz="0 1 0"/>
       <limit velocity="4.8" effort="1" lower="${-pi*0.57}" upper="${pi*0.5}" />
     </joint>
 
     <!--  Link 3 -->
-    <link name="link3_${name}">
+    <link name="${name}_link3">
       <visual>
         <origin xyz="0 0 0" rpy="0 0 0"/>
         <geometry>
-          <mesh filename="$(find marvin)/meshes/stl/chain_link3.stl" scale="0.001 0.001 0.001"/>
+          <mesh filename="package://marvin/meshes/stl/chain_link3.stl" scale="0.001 0.001 0.001"/>
         </geometry>
         <material name="grey"/>
       </visual>
@@ -86,7 +86,7 @@
       <collision>
         <origin xyz="0 0 0" rpy="0 0 0"/>
         <geometry>
-          <mesh filename="$(find marvin)/meshes/stl/chain_link3.stl" scale="0.001 0.001 0.001"/>
+          <mesh filename="package://marvin/meshes/stl/chain_link3.stl" scale="0.001 0.001 0.001"/>
         </geometry>
       </collision>
 
@@ -100,20 +100,20 @@
     </link>
 
     <!--  Joint 3 -->
-    <joint name="joint3_${name}" type="revolute">
-      <parent link="link3_${name}"/>
-      <child link="link4_${name}"/>
+    <joint name="${name}_joint3" type="revolute">
+      <parent link="${name}_link3"/>
+      <child link="${name}_link4"/>
       <origin xyz="0.024 0 0.128" rpy="0 0 0"/>
       <axis xyz="0 1 0"/>
       <limit velocity="4.8" effort="1" lower="${-pi*0.3}" upper="${pi*0.44}" />
     </joint>
 
     <!--  Link 4 -->
-    <link name="link4_${name}">
+    <link name="${name}_link4">
       <visual>
         <origin xyz="0 0 0" rpy="0 0 0"/>
         <geometry>
-          <mesh filename="$(find marvin)/meshes/stl/chain_link4.stl" scale="0.001 0.001 0.001"/>
+          <mesh filename="package://marvin/meshes/stl/chain_link4.stl" scale="0.001 0.001 0.001"/>
         </geometry>
         <material name="grey"/>
       </visual>
@@ -121,7 +121,7 @@
       <collision>
         <origin xyz="0 0 0" rpy="0 0 0"/>
         <geometry>
-          <mesh filename="$(find marvin)/meshes/stl/chain_link4.stl" scale="0.001 0.001 0.001"/>
+          <mesh filename="package://marvin/meshes/stl/chain_link4.stl" scale="0.001 0.001 0.001"/>
         </geometry>
       </collision>
 
@@ -135,20 +135,20 @@
     </link>
 
     <!--  Joint 4 -->
-    <joint name="joint4_${name}" type="revolute">
-      <parent link="link4_${name}"/>
-      <child link="link5_${name}"/>
+    <joint name="${name}_joint4" type="revolute">
+      <parent link="${name}_link4"/>
+      <child link="${name}_link5"/>
       <origin xyz="0.124 0.0 0.0" rpy="0 0 0"/>
       <axis xyz="0 1 0"/>
       <limit velocity="4.8" effort="1" lower="${-pi*0.57}" upper="${pi*0.65}" />
     </joint>
 
     <!--  Link 5 -->
-    <link name="link5_${name}">
+    <link name="${name}_link5">
       <visual>
         <origin xyz="0 0 0" rpy="0 0 0"/>
         <geometry>
-          <mesh filename="$(find marvin)/meshes/stl/chain_link5.stl" scale="0.001 0.001 0.001"/>
+          <mesh filename="package://marvin/meshes/stl/chain_link5.stl" scale="0.001 0.001 0.001"/>
         </geometry>
         <material name="grey"/>
       </visual>
@@ -156,7 +156,7 @@
       <collision>
         <origin xyz="0 0 0" rpy="0 0 0"/>
         <geometry>
-          <mesh filename="$(find marvin)/meshes/stl/chain_link5.stl" scale="0.001 0.001 0.001"/>
+          <mesh filename="package://marvin/meshes/stl/chain_link5.stl" scale="0.001 0.001 0.001"/>
         </geometry>
       </collision>
 
@@ -170,20 +170,20 @@
     </link>
 
     <!--  Gripper joint -->
-    <joint name="gripper_${name}" type="prismatic">
-      <parent link="link5_${name}"/>
-      <child link="gripper_link_${name}"/>
+    <joint name="${name}_gripper" type="prismatic">
+      <parent link="${name}_link5"/>
+      <child link="${name}_gripper_link"/>
       <origin xyz="0.0817 0.021 0.0" rpy="0 0 0"/>
       <axis xyz="0 1 0"/>
       <limit velocity="4.8" effort="1" lower="-0.010" upper="0.019" />
     </joint>
 
     <!--  Gripper link -->
-    <link name="gripper_link_${name}">
+    <link name="${name}_gripper_link">
       <visual>
         <origin xyz="0.0 0.0 0" rpy="0 0 0"/>
         <geometry>
-          <mesh filename="$(find marvin)/meshes/stl/chain_link_grip_l.stl" scale="0.001 0.001 0.001"/>
+          <mesh filename="package://marvin/meshes/stl/chain_link_grip_l.stl" scale="0.001 0.001 0.001"/>
         </geometry>
         <material name="grey"/>
       </visual>
@@ -191,7 +191,7 @@
       <collision>
         <origin xyz="0.0 0.0 0" rpy="0 0 0"/>
         <geometry>
-          <mesh filename="$(find marvin)/meshes/stl/chain_link_grip_l.stl" scale="0.001 0.001 0.001"/>
+          <mesh filename="package://marvin/meshes/stl/chain_link_grip_l.stl" scale="0.001 0.001 0.001"/>
         </geometry>
       </collision>
 
@@ -205,21 +205,21 @@
     </link>
 
     <!--  Gripper joint sub -->
-    <joint name="gripper_sub_${name}" type="prismatic">
-      <parent link="link5_${name}"/>
-      <child link="gripper_link_sub_${name}"/>
+    <joint name="${name}_gripper_sub" type="prismatic">
+      <parent link="${name}_link5"/>
+      <child link="${name}_gripper_link_sub"/>
       <origin xyz="0.0817 -0.021 0" rpy="0 0 0"/>
       <axis xyz="0 -1 0"/>
       <limit velocity="4.8" effort="1" lower="-0.010" upper="0.019" />
-      <mimic joint="gripper_${name}" multiplier="1"/>
+      <mimic joint="${name}_gripper" multiplier="1"/>
     </joint>
 
     <!--  Gripper link sub -->
-    <link name="gripper_link_sub_${name}">
+    <link name="${name}_gripper_link_sub">
       <visual>
         <origin xyz="0.0 -0.0 0" rpy="0 0 0"/>
         <geometry>
-          <mesh filename="$(find marvin)/meshes/stl/chain_link_grip_r.stl" scale="0.001 0.001 0.001"/>
+          <mesh filename="package://marvin/meshes/stl/chain_link_grip_r.stl" scale="0.001 0.001 0.001"/>
         </geometry>
         <material name="grey"/>
       </visual>
@@ -227,7 +227,7 @@
       <collision>
         <origin xyz="0.0 -0.0 0" rpy="0 0 0"/>
         <geometry>
-          <mesh filename="$(find marvin)/meshes/stl/chain_link_grip_r.stl" scale="0.001 0.001 0.001"/>
+          <mesh filename="package://marvin/meshes/stl/chain_link_grip_r.stl" scale="0.001 0.001 0.001"/>
         </geometry>
       </collision>
 
@@ -241,14 +241,14 @@
     </link>
 
     <!-- end effector joint -->
-    <joint name="end_effector_joint_${name}" type="fixed">
+    <joint name="${name}_end_effector_joint" type="fixed">
       <origin xyz="0.126 0.0 0.0" rpy="0 0 0"/>
-      <parent link="link5_${name}"/>
-      <child link="end_effector_link_${name}"/>
+      <parent link="${name}_link5"/>
+      <child link="${name}_end_effector_link"/>
     </joint>
 
     <!-- end effector link -->
-    <link name="end_effector_link_${name}">
+    <link name="${name}_end_effector_link">
       <visual>
         <origin xyz="0 0 0" rpy="0 0 0"/>
         <geometry>
@@ -256,6 +256,14 @@
         </geometry>
         <material name="red"/>
       </visual>
+
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.01 0.01 0.01" />
+        </geometry>
+        <material name="red"/>
+      </collision>
 
       <inertial>
         <origin xyz="0 0 0" />

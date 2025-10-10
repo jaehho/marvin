@@ -63,8 +63,8 @@ class JointErrorToVelocityPublisher(Node):
                 velocity = np.clip(self.gain * error, -self.velocity_limit, self.velocity_limit)
                 joint_errors[joint_name] = error
                 joint_velocities[joint_name] = velocity
-                # want abduction specifically to have higher gain
-                if 'shoulder_adduction' in joint_name:
+                # want adduction (joint 2) specifically to have higher gain
+                if joint_name in ('left_joint2', 'right_joint2'):
                     joint_velocities[joint_name] *= 2.0
             else:
                 self.get_logger().warn(f"Joint '{joint_name}' not found in actual joint states.")

@@ -18,13 +18,17 @@ from custom_interfaces.msg import HandLandmark
 OPEN_POSITION  = 0.019  # Open gripper position
 CLOSED_POSITION = -0.01  # Closed gripper position
 
-ARM_JOINT_TOPIC             = '/servo_node/delta_joint_cmds'
+LEFT_ARM_JOINT_TOPIC        = '/left/servo_node/delta_joint_cmds'
+RIGHT_ARM_JOINT_TOPIC       = '/right/servo_node/delta_joint_cmds'
 INTERMEDIATE_JOINT_TOPIC    = '/intermediate_joint_cmds'
 INTERMEDIATE_HAND_TOPIC     = '/hand_landmarks'
-GRIPPER_ACTION              = 'gripper_controller/gripper_cmd'
-START_SERVO_SRV             = '/servo_node/start_servo'
-STOP_SERVO_SRV              = '/servo_node/stop_servo'
-BASE_FRAME_ID               = 'link1'
+RIGHT_GRIPPER_ACTION        = '/right_hand_controller/gripper_cmd'
+LEFT_GRIPPER_ACTION         = '/left_hand_controller/gripper_cmd'
+LEFT_START_SERVO_SRV        = '/left/servo_node/start_servo'
+LEFT_STOP_SERVO_SRV         = '/left/servo_node/stop_servo'
+RIGHT_START_SERVO_SRV       = '/right/servo_node/start_servo'
+RIGHT_STOP_SERVO_SRV        = '/right/servo_node/stop_servo'
+BASE_FRAME_ID               = 'torso'
 PUBLISH_RATE_HZ             = 100
 
 
@@ -34,7 +38,8 @@ class TeleopNode(Node):
         super().__init__('open_manipulator_x_teleop')
 
         # Publisher for MoveIt Servo
-        self.joint_pub = self.create_publisher(JointJog, ARM_JOINT_TOPIC, 10)
+        self.left_joint_pub = self.create_publisher(JointJog, LEFT_ARM_JOINT_TOPIC, 10)
+        self.right_joint_pub = self.create_publisher(JointJog, RIGHT_ARM_JOINT_TOPIC, 10)
 
         # Subscriber for external JointJog
         self.create_subscription(
@@ -48,20 +53,28 @@ class TeleopNode(Node):
             self.hand_cb, 10
         )
 
-        # Gripper action client
-        self.gripper_ac = ActionClient(self, GripperCommand, GRIPPER_ACTION)
+        # Left gripper action client
+        self.left_gripper_ac = ActionClient(self, GripperCommand, LEFT_GRIPPER_ACTION)
+
+        # Right gripper action client
+        self.right_gripper_ac = ActionClient(self, GripperCommand, RIGHT_GRIPPER_ACTION)
 
         # Service clients for start/stop servo
-        self.start_cli = self.create_client(Trigger, START_SERVO_SRV)
-        self.stop_cli  = self.create_client(Trigger, STOP_SERVO_SRV)
+        self.left_start_cli = self.create_client(Trigger, LEFT_START_SERVO_SRV)
+        self.left_stop_cli  = self.create_client(Trigger, LEFT_STOP_SERVO_SRV)
+        self.right_start_cli = self.create_client(Trigger, RIGHT_START_SERVO_SRV)
+        self.right_stop_cli  = self.create_client(Trigger, RIGHT_STOP_SERVO_SRV)
 
         # Spin in background to service callbacks
         threading.Thread(target=self._spin_loop, daemon=True).start()
 
         # Wait/connect to MoveIt Servo services
-        self._wait_srv(self.start_cli, 'start_servo')
-        self._wait_srv(self.stop_cli,  'stop_servo')
-        self._call_trigger(self.start_cli, 'start')
+        self._wait_srv(self.left_start_cli, 'left_start_servo')
+        self._wait_srv(self.left_stop_cli,  'left_stop_servo')
+        self._call_trigger(self.left_start_cli, 'left_start')
+        self._wait_srv(self.right_start_cli, 'right_start_servo')
+        self._wait_srv(self.right_stop_cli,  'right_stop_servo')
+        self._call_trigger(self.right_start_cli, 'right_start')
 
 
     def _spin_loop(self):
@@ -89,22 +102,39 @@ class TeleopNode(Node):
 
     def external_joint_cb(self, msg: JointJog):
         # Stamp and forward to servo
-        out = JointJog()
-        out.header.stamp = self.get_clock().now().to_msg()
-        out.header.frame_id = BASE_FRAME_ID
-        out.joint_names = msg.joint_names
-        out.velocities  = msg.velocities
-        self.joint_pub.publish(out)
+        names = msg.joint_names
+        velocities = msg.velocities
+        out_left = JointJog()
+        out_right = JointJog()
+        out_left.header.stamp = self.get_clock().now().to_msg()
+        out_right.header.stamp = self.get_clock().now().to_msg()
+        out_left.header.frame_id = BASE_FRAME_ID #pretty sure this is actually left/right_link1 so idk if need to add side to name
+        out_right.header.frame_id = BASE_FRAME_ID
+        for name, vel in zip(names, velocities):
+            if name.startswith('left_'):
+                out_left.velocities.append(vel)
+                out_left.joint_names.append(name)
+            elif name.startswith('right_'):
+                out_right.velocities.append(vel)
+                out_right.joint_names.append(name)
+            else:
+                self.get_logger().warn(f'Ignoring joint "{name}" not starting with "left_" or "right_"')
+        self.left_joint_pub.publish(out_left)
+        self.right_joint_pub.publish(out_right)
         self.get_logger().info(f'Forwarded external JointJog: {msg.joint_names}')
 
 
-    def send_gripper_goal(self, position: float):
+    def send_gripper_goal(self, side: str, position: float):
         goal = GripperCommand.Goal()
         goal.command.position   = position
         goal.command.max_effort = 100.0
-        self.get_logger().info(f'Sending gripper goal: {position:.3f}')
-        self.gripper_ac.wait_for_server()
-        self.gripper_ac.send_goal_async(goal)
+        self.get_logger().info(f'Sending {side} gripper goal: {position:.3f}')
+        if side == 'left':
+            self.left_gripper_ac.wait_for_server()
+            self.left_gripper_ac.send_goal_async(goal)
+        elif side == 'right':
+            self.right_gripper_ac.wait_for_server()
+            self.right_gripper_ac.send_goal_async(goal)
 
 
     def hand_cb(self, msg: HandLandmark):
@@ -115,11 +145,12 @@ class TeleopNode(Node):
         for hand_label, is_open in zip(msg.label, msg.status):
             if hand_label == 'left_hand':
                 target = OPEN_POSITION  if is_open else CLOSED_POSITION
-                self.send_gripper_goal(target)
+                self.send_gripper_goal('left', target)
                 self.get_logger().info(f"Left hand is {'open' if is_open else 'closed'}, sending gripper command: {target:.3f}")
             elif hand_label == 'right_hand':
-                # for now, ignore right hand
-                pass
+                target = OPEN_POSITION  if is_open else CLOSED_POSITION
+                self.send_gripper_goal('right', target)
+                self.get_logger().info(f"Right hand is {'open' if is_open else 'closed'}, sending gripper command: {target:.3f}")
     
 
     def destroy_node(self):

@@ -1,0 +1,84 @@
+# Copied and changed from OMX
+controller_manager:
+  ros__parameters:
+    use_sim_time: False
+    update_rate: 400  # Hz
+
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+    left_arm_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+
+    right_arm_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+
+    left_hand_controller:
+      type: position_controllers/GripperActionController
+
+    right_hand_controller:
+      type: position_controllers/GripperActionController
+
+left_arm_controller:
+  ros__parameters:
+    joints:
+      - left_joint1
+      - left_joint2
+      - left_joint3
+      - left_joint4
+    command_interfaces:
+      - position
+    state_interfaces:
+      - position
+      - velocity
+
+    state_publish_rate: 200.0
+    action_monitor_rate: 20.0
+
+    allow_partial_joints_goal: true
+    open_loop_control: true
+    allow_integration_in_goal_trajectories: true
+    constraints:
+      stopped_velocity_tolerance: 0.01
+      goal_time: 0.0 # Defaults to 0.0 (start immediately)
+
+right_arm_controller:
+  ros__parameters:
+    joints:
+      - right_joint1
+      - right_joint2
+      - right_joint3
+      - right_joint4
+    command_interfaces:
+      - position
+    state_interfaces:
+      - position
+      - velocity
+
+    state_publish_rate: 200.0
+    action_monitor_rate: 20.0
+
+    allow_partial_joints_goal: true
+    open_loop_control: true
+    allow_integration_in_goal_trajectories: true
+    constraints:
+      stopped_velocity_tolerance: 0.01
+      goal_time: 0.0 # Defaults to 0.0 (start immediately)
+
+left_hand_controller:
+  ros__parameters:
+    joint: left_gripper
+    state_interfaces:
+      - position
+    command_interfaces:
+      - position
+    conversion_factor: 0.0001
+
+right_hand_controller:
+  ros__parameters:
+    joint: right_gripper
+    state_interfaces:
+      - position
+    command_interfaces:
+      - position
+    conversion_factor: 0.0001

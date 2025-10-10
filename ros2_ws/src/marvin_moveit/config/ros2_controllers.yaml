@@ -1,7 +1,7 @@
 # This config file is used by ros2_control
 controller_manager:
   ros__parameters:
-    update_rate: 100  # Hz
+    update_rate: 400  # Hz
 
     left_hand_controller:
       type: position_controllers/GripperActionController
@@ -11,7 +11,10 @@ controller_manager:
       type: position_controllers/GripperActionController
 
 
-    marvin_controller:
+    left_arm_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+
+    right_arm_controller:
       type: joint_trajectory_controller/JointTrajectoryController
 
 
@@ -24,13 +27,23 @@ left_hand_controller:
 right_hand_controller:
   ros__parameters:
     joint: right_gripper
-marvin_controller:
+left_arm_controller:
   ros__parameters:
     joints:
       - left_joint1
       - left_joint2
       - left_joint3
       - left_joint4
+    command_interfaces:
+      - position
+    state_interfaces:
+      - position
+      - velocity
+    allow_nonzero_velocity_at_trajectory_end: true
+    allow_partial_joints_goal: true
+right_arm_controller:
+  ros__parameters:
+    joints:
       - right_joint1
       - right_joint2
       - right_joint3
@@ -41,3 +54,4 @@ marvin_controller:
       - position
       - velocity
     allow_nonzero_velocity_at_trajectory_end: true
+    allow_partial_joints_goal: true
