@@ -153,10 +153,10 @@ Let $S$ (shoulder), $E$ (elbow), $H$ (same-side hip), $H_{opp}$ (opposite hip).
   \mathbf{u}=E-S,\quad \mathbf{v}=H-S,\quad \mathbf{h}=H_{opp}-H,\quad \hat{\mathbf{n}}=\frac{\mathbf{h}}{\lVert\mathbf{h}\rVert}
 \end{displaymath}
 Project onto the midline plane orthogonal to $\hat{\mathbf{n}}$:
-\begin{displaymath}
+$
 \mathbf{u}_\pi=\mathbf{u}-(\mathbf{u}\cdot\hat{\mathbf{n}})\,\hat{\mathbf{n}},\quad
-\mathbf{v}_\pi=\mathbf{v}-(\mathbf{v}\cdot\hat{\mathbf{n}})\,\hat{\mathbf{n}}.
-\end{displaymath}
+\mathbf{v}_\pi=\mathbf{v}-(\mathbf{v}\cdot\hat{\mathbf{n}})\,\hat{\mathbf{n}}. \\
+$
 Flexion:
 \begin{equation}
 \alpha=\arccos \!\left( \frac{\mathbf{u}_\pi \cdot \mathbf{v}_\pi}{\lVert\mathbf{u}_\pi\rVert\, \lVert\mathbf{v}_\pi\rVert} \right)\,.
@@ -164,10 +164,10 @@ Flexion:
 Map $\alpha$ to shoulder flexion/extension joint ($J_1$).
 
 \subsubsection{Shoulder Adduction/Abduction}
-Let $\mathbf{u}=E-S$, $\hat{\mathbf{n}}$ as above. Project $\mathbf{u}$:
-\begin{displaymath}
-\mathbf{u}_\pi=\mathbf{u}-(\mathbf{u}\cdot\hat{\mathbf{n}})\,\hat{\mathbf{n}}.
-\end{displaymath}
+Let $\mathbf{u}$, $\hat{\mathbf{n}}$ be as above. Project $\mathbf{u}$:
+$
+\mathbf{u}_\pi=\mathbf{u}-(\mathbf{u}\cdot\hat{\mathbf{n}})\,\hat{\mathbf{n}}.\\
+$
 Adduction magnitude:
 \begin{equation}
 \beta=\arccos \!\left( \frac{\mathbf{u}\cdot\mathbf{u}_\pi}{\lVert\mathbf{u}\rVert\, \lVert\mathbf{u}_\pi\rVert} \right)\,.
@@ -175,7 +175,7 @@ Adduction magnitude:
 Signed ab/adduction can be obtained from $\operatorname{sign}\big((\mathbf{u}\times\mathbf{u}_\pi)\cdot\hat{\mathbf{n}}\big)$. Map to $J_2$.
 
 \subsubsection{Elbow Flexion}
-Let $\mathbf{u}=E-S$ and forearm $\mathbf{f}=E-W$. Then
+Let $\mathbf{u}$ be as above and forearm $\mathbf{f}=E-W$. Then
 \begin{equation}
 \theta=\arccos \!\left( \frac{\mathbf{u}\cdot\mathbf{f}}{\lVert\mathbf{u}\rVert\, \lVert\mathbf{f}\rVert} \right)\,.
 \end{equation}
