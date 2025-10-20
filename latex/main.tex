@@ -6,14 +6,11 @@
 \setcopyright{acmlicensed}
 \copyrightyear{2025}
 \acmYear{2026}
-\acmDOI{XXXXXXX.XXXXXXX}
+\acmDOI{XXXXXXX.XXXXXXX} % TODO
 \acmConference[TEI SDC '26]{TEI Student Design Challenge}{March, 2026}{Chicago, Illinois}
-\acmISBN{978-1-4503-XXXX-X/2026/06}
+\acmISBN{978-1-4503-XXXX-X/2026/06} % TODO
 
 \AtBeginDocument{\providecommand\BibTeX{{Bib\TeX}}}
-
-%% Remove for camera ready if not needed
-% \citestyle{acmauthoryear}
 
 \begin{document}
 
@@ -42,7 +39,6 @@
 
 \renewcommand{\shortauthors}{Last}
 
-%% Abstract
 \begin{abstract}
 MARVIN is a dual-arm teleoperational robot that mirrors a human 
 operator's upper-body motion in real time using just a standard webcam. 
@@ -62,33 +58,20 @@ full-body telepresence. % edit last line to match whatever
 \begin{CCSXML}
 <ccs2012>
    <concept>
-       <concept_id>10003120.10003121</concept_id>
-       <concept_desc>Human-centered computing~Human computer interaction (HCI)</concept_desc>
+       <concept_id>10010583</concept_id>
+       <concept_desc>Hardware</concept_desc>
        <concept_significance>500</concept_significance>
-       </concept>
-   <concept>
-       <concept_id>10003120.10003121.10003128.10011755</concept_id>
-       <concept_desc>Human-centered computing~Gestural input</concept_desc>
-       <concept_significance>300</concept_significance>
-       </concept>
-   <concept>
-       <concept_id>10003120.10003121.10003124.10010868</concept_id>
-       <concept_desc>Human-centered computing~Web-based interaction</concept_desc>
-       <concept_significance>300</concept_significance>
        </concept>
  </ccs2012>
 \end{CCSXML}
 
-\ccsdesc[500]{Human-centered computing~Human computer interaction (HCI)}
-\ccsdesc[300]{Human-centered computing~Gestural input}
-\ccsdesc[300]{Human-centered computing~Web-based interaction}
+\ccsdesc[500]{Hardware}
 
 \keywords{teleoperation, human-robot interaction, ROS2, MoveIt, MediaPipe}
 
-% TODO: replace with dates
-\received{NA}
-\received[revised]{NA}
-\received[accepted]{NA}
+\received{NA} % TODO
+\received[revised]{NA} % TODO
+\received[accepted]{NA} % TODO
 
 \maketitle
 
@@ -112,13 +95,16 @@ connection can be had at-distance, enabling the operator to perform actions, exp
 intentions, and interact with physical environments shared by the receiver.
 
 Furthermore, MARVIN is an accessible platform, as it requires only a standard 
-webcam and Internet interface, which extends this ritual to anyone irrespective
-of distance, with only minimal technological barriers. This inclusivity broadens
+webcam and Internet interface, which extends this ritual to anyone irrespective 
+of distance, with only minimal technological barriers. This inclusivity broadens 
 the system's use as a tool for fostering shared sensory experiences in remote or 
 hybrid environments. Via its integration of presence, interaction, and accessibility, 
 MARVIN allows tangible rituals to emerge out of traditional confinement and into 
 a process of technological mediation that reconnects individuals to the physical world
 and to one another.
+
+% \section{Related Work}
+% TODO: Add literature comparison and related teleoperation frameworks.
 
 \section{Hardware}
 MARVIN uses components from the ROBOTIS OpenManipulator-X platform. Each arm has 
@@ -227,25 +213,25 @@ mirroring of human motion.
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=0.5\linewidth]{assets/web-ui}
-  \caption{Browser UI for teleoperation. TODO: elaborate.}
+  \includegraphics[width=\linewidth]{assets/web-ui}
+  \caption{Browser UI for teleoperation. TODO: elaborate.} % TODO
   \Description{A screenshot of the web interface showing video feed, control buttons, and status indicators.}
   \label{fig:ui}
 \end{figure}
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=0.5\linewidth]{assets/system-diagram}
-  \caption{ROS rqt graph overview. TODO: elaborate.}
-  \Description{TODO}
+  \includegraphics[width=\linewidth]{assets/system-diagram}
+  \caption{ROS rqt graph overview. TODO: elaborate.} % TODO
+  \Description{TODO} % TODO
   \label{fig:system}
 \end{figure}
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=0.5\linewidth]{assets/system-diagram.png}
-  \caption{Communication pipeline and timing. TODO: elaborate.}
-  \Description{TODO}
+  \includegraphics[width=\linewidth]{assets/system-diagram.png}
+  \caption{Communication pipeline and timing. TODO: elaborate.} % TODO
+  \Description{TODO} % TODO
   \label{fig:pipeline}
 \end{figure}
 
@@ -314,7 +300,7 @@ We thank the Cooper Union community for volunteering and supporting facilities.
 \end{acks}
 
 \bibliographystyle{ACM-Reference-Format}
-\bibliography{references}
+\bibliography{references} % TODO: verify references.bib completeness
 
 \appendix
 \section{Angle Mapping and Calibration}
