@@ -76,9 +76,6 @@ By remotely manipulating the robot via one's own mirrored actions, tangible soci
 
 Furthermore, MARVIN is an accessible platform, as it requires only a standard webcam and Internet interface, which extends this ritual to anyone irrespective of distance, with only minimal technological barriers. This inclusivity broadens the system's use as a tool for fostering shared sensory experiences in remote or hybrid environments. Via its integration of presence, interaction, and accessibility, MARVIN allows tangible rituals to emerge out of traditional confinement and into a process of technological mediation that reconnects individuals to the physical world and to one another.
 
-% \section{Related Work}
-% TODO: Add literature comparison and related teleoperation frameworks.
-
 \section{Hardware}
 MARVIN uses components from the ROBOTIS OpenManipulator-X platform. Each arm has 5 DOF and is powered by Dynamixel XM430-W350 servos. We utilize two arms attached to an aluminum-beam torso and powered via a Dynamixel U2D2 power hub.
 
@@ -127,15 +124,15 @@ Using the Hand Landmarker (labels shown in Figure \ref{fig:hand-landmarks}), def
 
 \begin{figure}[htbp]
   \centering
-  \begin{subfigure}[b]{0.45\linewidth}
+  \begin{subfigure}[b]{0.35\linewidth}
     \centering
     \includegraphics[width=\linewidth]{assets/pose-landmarks.png}
     \caption{MediaPipe Pose Landmarks. The pose landmarker model tracks 33 body landmark locations, representing the approximate location of the labeled body parts.}
     \Description{A diagram of a human figure with 33 labeled landmarks, including shoulders, elbows, wrists, hips, knees, and ankles.}
     \label{fig:pose-landmarks}
-  \end{subfigure}
-  \hfill
-  \begin{subfigure}[b]{0.45\linewidth}
+  \end{subfigure}%
+  \hspace{1em}%
+  \begin{subfigure}[b]{0.35\linewidth}
     \centering
     \includegraphics[width=\linewidth]{assets/hand-landmarks.png}
     \caption{MediaPipe Hand Landmarks. The hand landmark model bundle detects the keypoint localization of 21 hand-knuckle coordinates within the detected hand regions.}
@@ -147,15 +144,17 @@ Using the Hand Landmarker (labels shown in Figure \ref{fig:hand-landmarks}), def
 \end{figure}
 
 \subsection{Control}
-We use MoveIt real-time servoing with two independent kinematic chains, one per arm. Each chain is associated with a servoing node that subscribes to desired joint velocities. These velocities are computed from the error between detected target joint angles and current joint states from the \texttt{/joint\_states} topic, before being scaled by gains and sent as \texttt{JointJog} commands. Figure \ref{fig:rosgraph} shows the ROS2 node and topic architecture.
+We use MoveIt real-time servoing with two independent kinematic chains, one per arm. Each chain is associated with a servoing node that subscribes to desired joint velocities. These velocities are computed from the error between detected target joint angles and current joint states from the \texttt{/joint\_states} topic, before being scaled by gains and sent as \texttt{JointJog} commands. 
+The ROS2 node architecture can be found at \url{marvin.ee.cooper.edu/assets/rosgraph.png}.
+% Figure \ref{fig:rosgraph} shows the ROS2 node and topic architecture.
 
-\begin{figure}[htbp]
-  \centering
-  \includegraphics[width=\linewidth]{assets/rosgraph}
-  \caption{ROS rqt graph: nodes circled and topics labeled on connections between nodes.}
-  \Description{ROS2 rqt graph displaying nodes and topics}
-  \label{fig:rosgraph}
-\end{figure}
+% \begin{figure}[htbp]
+%   \centering
+%   \includegraphics[width=\linewidth]{assets/rosgraph}
+%   \caption{ROS rqt graph: nodes circled and topics labeled on connections between nodes.}
+%   \Description{ROS2 rqt graph displaying nodes and topics}
+%   \label{fig:rosgraph}
+% \end{figure}
 
 \section{Website}
 The website functions as the browser-based front end of MARVIN’s remote teleoperation system. It captures the user’s webcam stream, performs local pose and hand landmark inference, and transmits the previously mentioned key pose landmarks directly to MARVIN, while the hand landmarks are processed locally asforementioned and the boolean status of each hand is then sent to MARVIN. The website also embeds a live video stream of the robot, allowing visual feedback during operation. 
@@ -164,8 +163,8 @@ Implemented entirely in client-side JavaScript using the MediaPipe Tasks API, th
 
 \begin{figure}[htbp]
   \centering
-  \includegraphics[width=\linewidth]{assets/web}
-  \caption{Screenshot of MARVIN website: livestream of MARVIN in center, webcam feed and landmark overlay on right. Connection information below MARVIN livestream and controls below webcam feed.}
+  \includegraphics[width=\linewidth]{assets/web} % TODO: use update ui
+  \caption{Screenshot of MARVIN website: livestream of MARVIN in center, webcam feed and landmark overlay on the right. Connection information below MARVIN livestream and controls below webcam feed.}
   \Description{A screenshot of the web interface showing video feed, control buttons, and status indicators.}
   \label{fig:web}
 \end{figure}
@@ -180,13 +179,13 @@ The connection to MARVIN is made via ROSBridge over WebSocket, allowing seamless
   \label{fig:pipeline}
 \end{figure}
 
-\begin{figure}[htbp]
-  \centering
-  \includegraphics[width=0.5\linewidth]{assets/marvin}
-  \caption{MARVIN}
-  \Description{Photograph of MARVIN}
-  \label{fig:photo}
-\end{figure}
+% \begin{figure}[htbp]
+%   \centering
+%   \includegraphics[width=0.5\linewidth]{assets/marvin}
+%   \caption{MARVIN}
+%   \Description{Photograph of MARVIN}
+%   \label{fig:photo}
+% \end{figure}
 
 \section{Operation and User Study}
 MARVIN was tested in local operation during the Cooper Union End of Year Show of May 2025. The robot mirrored onlooker movements in real time, and we received qualitative feedback requesting the addition of hand gestures for a more natural feeling. This informed subsequent implementation of the hand landmark module and gripper control. 
