@@ -32,3 +32,6 @@ samples/*.tex
 samples/*.bbx
 samples/*.cbx
 samples/*.dbx
+*.synctex.gz
+*.fdb_latexmk
+*.fls
