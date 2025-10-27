@@ -86,48 +86,46 @@ MARVIN explores the theme of the 2026 SDC theme of Sensory Rituals through the d
 
 Furthermore, MARVIN is an accessible platform, as it requires only a standard webcam and Internet interface, which extends this ritual to many users, with only minimal technological barriers. Via its integration of presence, interaction, and accessibility, MARVIN allows tangible rituals to emerge out of traditional confinement and into a process of technological mediation that reconnects individuals to the physical world and to one another.
 
-\section{Hardware}
+\section{Methodology}
+\subsection{Hardware And Software Integration}
 MARVIN uses components from the ROBOTIS OpenManipulator-X platform. Each arm has 5 DOF and is powered by Dynamixel XM430-W350 servos. We utilize two arms attached to an aluminum-beam torso and powered via a Dynamixel U2D2 power hub.
 
-\section{Software}
-MARVIN runs on the Humble distribution of ROS2. High-level motion is handled by MoveIt, which translates user commands into low-level commands sent to Dynamixel controllers. A custom URDF/Xacro model, which was modified from ROBOTIS's package \cite{OpenManipulator2025}, encodes simultaneous kinematics, inertial, and control interfaces for both arms.
+MARVIN runs on the Humble distribution of ROS2. MoveIt handles high-level motion planning and translates user commands into low-level Dynamixel controller commands. A custom URDF/Xacro model, which was modified from ROBOTIS's package \cite{OpenManipulator2025}, encodes simultaneous kinematics, inertial, and control interfaces for both arms.
 
 \subsection{Pose Detection}
 OpenCV interfaces a MediaPipe-based pose detector to extract normalized 3D joint landmarks from a webcam stream \cite{noauthor_mediapipe_nodate}. We use shoulder (11,12), elbow (13,14), wrist (15,16), and hip (23,24) landmarks to compute our desired joint angles. Figure \ref{fig:pose-landmarks} displays the landmark labelling scheme.
 
-\subsubsection{Shoulder Flexion}
-Let $S$ (shoulder), $E$ (elbow), $H$ (same-side hip), $H_{opp}$ (opposite hip).
-\begin{displaymath}
-  \mathbf{u}=E-S,\quad \mathbf{v}=H-S,\quad \mathbf{h}=H_{opp}-H,\quad \hat{\mathbf{n}}=\frac{\mathbf{h}}{\lVert\mathbf{h}\rVert}
-\end{displaymath}
-Project onto the midline plane orthogonal to $\hat{\mathbf{n}}$:
-$
-\mathbf{u}_\pi=\mathbf{u}-(\mathbf{u}\cdot\hat{\mathbf{n}})\,\hat{\mathbf{n}},\quad
-\mathbf{v}_\pi=\mathbf{v}-(\mathbf{v}\cdot\hat{\mathbf{n}})\,\hat{\mathbf{n}}. \\
-$
-Flexion:
+For each side (left and right), let $S$, $E$, $W$, $H$, $H_{opp}$ be the 3D position vectors of the shoulder, elbow, wrist, same-side hip, and opposite hip, respectively. Then define:
+
+\begin{equation}
+  \mathbf{f}=E-W,\quad \mathbf{u}=E-S,\quad \mathbf{v}=H-S,\quad \mathbf{h}=H_{opp}-H,\quad \hat{\mathbf{h}}=\frac{\mathbf{h}}{\lVert\mathbf{h}\rVert}
+\end{equation}
+
+\subsubsection{Shoulder Flexion/Extension}
+To determine the anatomical shoulder flexion/extension angle, we start by projecting the upper arm and torso vectors $\mathbf{u}$ and $\mathbf{v}$ onto the shifted anatomical sagittal plane orthogonal to $\hat{\mathbf{h}}$:
+\begin{equation}
+\mathbf{u}_\pi=\mathbf{u}-(\mathbf{u}\cdot\hat{\mathbf{h}})\,\hat{\mathbf{h}},\quad
+\mathbf{v}_\pi=\mathbf{v}-(\mathbf{v}\cdot\hat{\mathbf{h}})\,\hat{\mathbf{h}}.
+\end{equation}
+which estimates Shoulder Flexion as:
 \begin{equation}
 \alpha=\arccos \!\left( \frac{\mathbf{u}_\pi \cdot \mathbf{v}_\pi}{\lVert\mathbf{u}_\pi\rVert\, \lVert\mathbf{v}_\pi\rVert} \right)\,.
 \end{equation}
-Map $\alpha$ to shoulder flexion/extension joint ($J_1$).
+We map $\alpha$ to the first joint $J_1$ of each OpenManipulator kinematic chain.
 
-\subsubsection{Shoulder Adduction/Abduction}
-Let $\mathbf{u}$, $\hat{\mathbf{n}}$ be as above. Project $\mathbf{u}$:
-$
-\mathbf{u}_\pi=\mathbf{u}-(\mathbf{u}\cdot\hat{\mathbf{n}})\,\hat{\mathbf{n}}.\\
-$
-Adduction magnitude:
+\subsubsection{Shoulder Abduction/Adduction}
+Using the original and projected upper arm vectors $\mathbf{u}$ and $\mathbf{u}_\pi$, we estimate the ab/adduction magnitude as:
 \begin{equation}
 \beta=\arccos \!\left( \frac{\mathbf{u}\cdot\mathbf{u}_\pi}{\lVert\mathbf{u}\rVert\, \lVert\mathbf{u}_\pi\rVert} \right)\,.
 \end{equation}
-Signed ab/adduction can be obtained from $\operatorname{sign}\big((\mathbf{u}\times\mathbf{u}_\pi)\cdot\hat{\mathbf{n}}\big)$. Map to $J_2$.
+The direction of $\beta$ can be obtained from $\operatorname{sign}\big((\mathbf{u}\times\mathbf{u}_\pi)\cdot\hat{\mathbf{h}}\big)$ which is positive for abduction and negative for adduction. We map this to the second joint $J_2$ of each OpenManipulator kinematic chain.
 
 \subsubsection{Elbow Flexion}
-Let $\mathbf{u}$ be as above and forearm $\mathbf{f}=E-W$. Then
+Using the upper arm and forearm vectors $\mathbf{u}$ and $\mathbf{f}$, we estimate elbow flexion as:
 \begin{equation}
 \theta=\arccos \!\left( \frac{\mathbf{u}\cdot\mathbf{f}}{\lVert\mathbf{u}\rVert\, \lVert\mathbf{f}\rVert} \right)\,.
 \end{equation}
-Map $\theta$ to elbow joint $J_3$.
+and map $\theta$ to the third joint $J_3$ of each OpenManipulator kinematic chain.
 
 \subsubsection{Hand Open/Close}
 Using the Hand Landmarker (labels shown in Figure \ref{fig:hand-landmarks}), define a reference length from wrist (0) to middle-finger MCP (9). We mark a hand as open if fewer than three fingertips among indices \{4,8,12,16,20\} lie closer to the wrist than the reference. We then publish binary open/closed messages to drive the gripper.
@@ -137,24 +135,21 @@ Using the Hand Landmarker (labels shown in Figure \ref{fig:hand-landmarks}), def
   \begin{subfigure}[b]{0.35\linewidth}
     \centering
     \includegraphics[width=\linewidth]{assets/pose-landmarks.png}
-    \caption{MediaPipe Pose Landmarks \cite{PoseLandmarkDetection}. The model tracks 33 landmark locations, representing the approximate location of the labeled body parts.}
     \Description{A diagram of a human figure with 33 labeled landmarks, including shoulders, elbows, wrists, hips, knees, and ankles.}
-    \label{fig:pose-landmarks}
   \end{subfigure}%
   \hspace{1em}%
   \begin{subfigure}[b]{0.35\linewidth}
     \centering
     \includegraphics[width=\linewidth]{assets/hand-landmarks.png}
-    \caption{MediaPipe Hand Landmarks \cite{HandLandmarksDetection}. The detects the keypoint localization of 21 hand-knuckle coordinates within the detected hand regions.}
     \Description{A diagram of a hand with 21 labeled landmarks, including wrist, palm, and finger joints.}
-    \label{fig:hand-landmarks}
   \end{subfigure}
-  \caption{Comparison of MediaPipe landmark models: (a) Pose and (b) Hand.}
+  \caption{Comparison of MediaPipe landmark models. (a) Pose Landmarks \cite{PoseLandmarkDetection}: the model tracks 33 landmark locations representing the approximate positions of labeled body parts. (b) Hand Landmarks \cite{HandLandmarksDetection}: the model detects 21 hand-knuckle coordinates within the detected hand regions.}
   \label{fig:landmarks-comparison}
 \end{figure}
 
+
 \subsection{Control}
-We use MoveIt real-time servoing with one independent kinematic chain per arm. Each chain is associated with a servoing node that subscribes to desired joint velocities. These velocities are computed from the error between target (mirrored) joint angles and current joint states from the \texttt{/joint\_states} topic, before being scaled by gains and sent as velocity \texttt{JointJog} commands. With a previous incident of MARVIN damaging itself during testing, we implemented several safety measures. We enforce velocity, position, and current limits at the controller, while MoveIt predicts and prevents self-collisions via planning scene simulations and pre-computed collision matrices.
+We use MoveIt real-time servoing with one independent kinematic chain per arm. Each chain is associated with a servoing node that subscribes to desired joint velocities. These velocities are computed from the error between target (mirrored) joint angles and current joint states from the \texttt{/joint\_states} topic, before being scaled by gains and sent as velocity \texttt{JointJog} commands. With a previous incident of MARVIN damaging itself during testing \cite{rosegebhardtvevoHRI2021Affordable2021}, we implemented several safety measures. We enforce velocity, position, and current limits at the controller, while MoveIt predicts and prevents self-collisions via planning scene simulations and pre-computed collision matrices.
 The ROS2 node architecture can be found at \url{MARVIN.ee.cooper.edu/assets/rosgraph.png}.
 % Figure \ref{fig:rosgraph} shows the ROS2 node and topic architecture.
 
@@ -166,7 +161,7 @@ The ROS2 node architecture can be found at \url{MARVIN.ee.cooper.edu/assets/rosg
 %   \label{fig:rosgraph}
 % \end{figure}
 
-\section{Website}
+\subsection{Website}
 The website functions as the browser-based front end of MARVIN’s remote teleoperation system. It captures the user’s webcam stream, performs local pose and hand landmark inference, and transmits the previously mentioned key pose landmarks directly to MARVIN, while the hand landmarks are processed locally asforementioned and the boolean status of each hand is then sent to MARVIN. The website also embeds a live video stream of the robot, allowing visual feedback during operation. 
 
 Implemented entirely in client-side JavaScript using the MediaPipe Tasks API, the system requires no native installation or external dependencies. Figure \ref{fig:web} shows a screenshot of the web interface. A compact control panel enables users to start or stop the camera, select inference model complexity, and toggle streaming to the ROSBridge server, which exposes \texttt{pose\_landmarks} and \texttt{hand\_landmarks} topics for downstream motion control.
@@ -191,18 +186,10 @@ Figure \ref{fig:pipeline} illustrates the communication pipeline from user to MA
   \label{fig:pipeline}
 \end{figure}
 
-% \begin{figure}[htbp]
-%   \centering
-%   \includegraphics[width=0.5\linewidth]{assets/MARVIN}
-%   \caption{MARVIN}
-%   \Description{Photograph of MARVIN}
-%   \label{fig:photo}
-% \end{figure}
-
-\section{Operation and User Study}
+\section{Results}
 MARVIN was tested in local operation during the Cooper Union End of Year Show of May 2025. The robot mirrored onlooker movements in real time, and we received qualitative feedback requesting the addition of hand gestures for a more natural feeling. This informed subsequent implementation of the hand landmark module and gripper control. 
 
-We additionally tested remote operation of MARVIN with peer volunteers from the Cooper Union community, while the robot was stationed in the lab. Participants were interacted with the website and controlled MARVIN from a separate room. Despite attempts to optimize low latency communication, there is a noticeable lag between operator movement and live stream video feedback, with an average round-trip time of \textit{~3} s. The delay includes the the websocket transmission time, processinng time on the ROS2 side, and return youtube streaming lag.
+We additionally tested remote operation of MARVIN with peer volunteers from the Cooper Union community, while the robot was stationed in the lab. Participants were interacted with the website and controlled MARVIN from a separate room. Despite attempts to optimize low latency communication, there is a noticeable lag between operator movement and live stream video feedback, with an average round-trip time of \textit{~3} s. The delay includes the the websocket transmission time, processing time on the ROS2 side, and return youtube streaming lag.
 
 \section{Discussion}
 MARVIN demonstrates that fully client-side inference is viable for dual-arm mirroring. Remaining gaps include wrist pronation/supination estimation, depth ambiguity in monocular input, and gripper force control. Future work includes (1) integrating depth perception, (2) incorporating joint configurations and kinematic structures more closely aligned with human anatomy, (3) self-calibration, and (4) extending to mobile bases for extended telepresence.
@@ -213,7 +200,7 @@ We recognize that telepresence expands access but raises safety and privacy conc
 We provided a remote teleoperation system that minimizes user setup while retaining intuitive, low-latency control of a dual-arm robot. All code and hardware designs are open-sourced at \url{https://github.com/jaehho/marvin}.
 
 \begin{acks}
-Many thanks go to our advisor, Prof. Mili Shah, for her continued guidance and support. We also thank The Cooper Union community as a whole for volunteering and supporting facilities.
+Many thanks go to our advisor, Prof. Mili Shah, for her continued guidance and support. We also credit previous students who worked on MARVIN, Aaron Schmitz, Rose Gebhardt, and Do Hyung (Dave) Kwon. Finally, we thank the Cooper Union community as a whole for volunteering and supporting facilities.
 \end{acks}
 
 \bibliographystyle{ACM-Reference-Format}
