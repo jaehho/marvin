@@ -3,326 +3,734 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>MediaPipe Pose & Hands — ROSBridge</title>
+  <title>MARVIN</title>
   <style>
-    :root{--bg:#0b0f14;--panel:#111823;--ink:#d9e1ee;--muted:#8aa0b6;--accent:#5bbcff;--ok:#3bd671;--warn:#ffcc66;--err:#ff7a7a}
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{margin:0;background:linear-gradient(180deg,#0b0f14,#0e141d);color:var(--ink);font:14px/1.4 system-ui,Segoe UI,Roboto,Helvetica,Arial}
-    .wrap{max-width:1200px;margin:0 auto;padding:20px}
-    header{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:12px}
-    h1{font-size:18px;margin:0;font-weight:600}
-    .grid{display:grid;grid-template-columns:1fr;gap:12px}
-    @media(min-width:980px){.grid{grid-template-columns:7fr 4fr}}
-    .row{display:flex;gap:8px;align-items:center}
+    :root {
+      --bg: #09090b;
+      --surface: #18181b;
+      --surface-hover: #27272a;
+      --border: #3f3f46;
+      --text: #e4e4e7;
+      --muted: #a1a1aa;
+      --primary: #3b82f6;
+      --primary-fg: #eff6ff;
+      --success: #22c55e;
+      --danger: #ef4444;
+      --warn: #eab308; /* Yellow/Amber color */
+      --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
 
-    .toolbar{background:var(--panel);border:1px solid #1d2836;border-radius:12px}
-    .controls{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px}
-    .chip{background:#0d1520;padding:8px 10px;border-radius:12px;display:flex;gap:8px;align-items:center;border:1px solid #1d2836}
-    .chip label{font-size:12px;color:var(--muted)}
-    select,input{background:#000;color:var(--ink);border:1px solid #1d2a3e;border-radius:8px;padding:4px 6px}
-    .btn{cursor:pointer;background:var(--accent);border:0;color:#021d2b;padding:9px 12px;border-radius:10px;font-weight:600}
-    .btn:disabled{opacity:.5;cursor:not-allowed}
-    .toggle{appearance:none;width:40px;height:20px;background:#23344b;border-radius:999px;position:relative;cursor:pointer;outline:none;border:1px solid #1d2836}
-    .toggle:checked{background:var(--accent)}
-    .toggle::before{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;background:#fff;border-radius:50%;transition:.2s}
-    .toggle:checked::before{left:22px}
+    * { box-sizing: border-box; }
+    
+    body {
+      margin: 0;
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden; /* Prevent body scroll, handle inside containers */
+    }
 
-    .stage{position:relative;background:#05080c;border:1px solid #142034;border-radius:16px;overflow:hidden;margin-top:12px}
-    video,canvas{display:block;width:100%;height:auto}
-    #overlay{position:absolute;left:0;top:0}
-    .pill{padding:2px 8px;border-radius:999px;border:1px solid #234162;color:#aad3ff}
+    /* Layout */
+    .app-shell {
+      display: grid;
+      grid-template-columns: 1fr;
+      grid-template-rows: auto 1fr;
+      height: 100%;
+      overflow: hidden;
+    }
 
-    fieldset{margin:0;border:1px solid #1d2a3e;border-radius:12px;padding:10px}
-    legend{color:var(--muted);padding:0 6px;font-size:13px;letter-spacing:.2px}
-    .kv{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px}
-    .kv div:nth-child(odd){color:var(--muted)}
-    .kv div:nth-child(even){color:#e6edf7}
+    header {
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 60px;
+    }
+
+    h1 { font-size: 16px; font-weight: 600; margin: 0; letter-spacing: -0.01em; display:flex; align-items:center; gap:8px;}
+    h1 span { color: var(--muted); font-weight: 400; }
+
+    .main-content {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 20px;
+      padding: 20px;
+      overflow-y: auto;
+    }
+
+    @media(min-width: 1024px) {
+      .main-content {
+        grid-template-columns: 1fr 320px;
+        overflow: hidden; /* Lock scroll on desktop */
+      }
+    }
+
+    /* Panels */
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .panel-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      background: rgba(0,0,0,0.2);
+    }
+
+    .panel-body { padding: 16px; }
+
+    /* Video Stage */
+    .stage-container {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      position: relative;
+    }
+
+    .stage {
+      position: relative;
+      background: #000;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+      flex-grow: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    video, canvas {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      max-width: 100%;
+      max-height: 100%;
+      width: auto; height: auto;
+    }
+    
+    /* Recording Indicator */
+    .rec-indicator {
+      position: absolute;
+      top: 16px; right: 16px;
+      background: rgba(0,0,0,0.6);
+      padding: 6px 10px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      opacity: 0;
+      transition: opacity 0.3s;
+      z-index: 10;
+      pointer-events: none;
+    }
+    .rec-indicator.active { opacity: 1; }
+    .rec-dot {
+      width: 8px; height: 8px;
+      background-color: var(--danger);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--danger);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+
+    /* Controls */
+    .control-group { margin-bottom: 20px; }
+    .control-group:last-child { margin-bottom: 0; }
+    
+    .label-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .label-text { font-size: 13px; font-weight: 500; color: var(--text); }
+
+    .btn {
+      width: 100%;
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid transparent;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .btn-primary { background: var(--primary); color: var(--primary-fg); }
+    .btn-primary:hover { background: #2563eb; }
+    .btn-outline { background: transparent; border-color: var(--border); color: var(--text); }
+    .btn-outline:hover { background: var(--surface-hover); }
+    .btn:disabled { opacity: 0.7; cursor: wait; }
+
+    select {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px;
+      border-radius: 6px;
+      outline: none;
+    }
+
+    /* Toggle Switch */
+    .toggle-wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--surface-hover);
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+    }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #3f3f46;
+      transition: .4s;
+      border-radius: 34px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px; width: 18px;
+      left: 3px; bottom: 3px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+    input:checked + .slider { background-color: var(--success); }
+    
+    /* FIX: More specific selector to override the checked green state */
+    input.reconnecting + .slider, 
+    input:checked.reconnecting + .slider { 
+      background-color: var(--warn); 
+    }
+    .reconnecting + .slider:before { transform: translateX(20px); }
+
+    input:checked + .slider:before { transform: translateX(20px); }
+    input:disabled + .slider { opacity: 0.5; cursor: not-allowed; }
+
+    /* Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .stat-item {
+      background: var(--bg);
+      padding: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .stat-label { font-size: 12px; color: var(--muted); font-family: var(--font-mono); }
+    .stat-value { font-size: 13px; font-weight: 500; font-family: var(--font-mono); color: var(--primary); }
+
+    /* Badges */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 99px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .badge-gray { background: #27272a; color: #a1a1aa; border: 1px solid #3f3f46; }
+    .badge-green { background: rgba(34, 197, 94, 0.1); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.2); }
+    .badge-warn { background: rgba(234, 179, 8, 0.1); color: #facc15; border: 1px solid rgba(234, 179, 8, 0.2); }
+    .badge-error { background: rgba(239, 68, 68, 0.1); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.2); }
+    
+    /* Spin animation for loading */
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .spin { animation: spin 1s linear infinite; }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <header>
-      <h1>MediaPipe Pose & Hands > rosbridge</h1>
-      <div class="row"><span class="pill" id="status">stopped</span></div>
-    </header>
 
-    <div class="grid">
-      <div>
-        <details class="toolbar" open>
-          <summary style="padding:10px 12px;cursor:pointer;color:#b5c6dc">Controls</summary>
-          <div class="controls">
-            <button id="camBtn" class="btn">Start camera</button>
-            <div class="chip"><label for="modelSel">pose model</label>
-              <select id="modelSel">
-                <option value="lite">lite</option>
-                <option value="full">full</option>
-                <option value="heavy">heavy</option>
-              </select>
-            </div>
-            <div class="chip"><label for="wsEnable">stream</label>
-              <input id="wsEnable" type="checkbox" class="toggle" disabled />
+<div class="app-shell">
+  <header>
+    <h1>MARVIN <span>/ ROSBridge</span></h1>
+    <div id="statusBadge" class="badge badge-gray">Stopped</div>
+  </header>
+
+  <div class="main-content">
+    
+    <!-- Left Column: Robot View (Main) -->
+    <div class="stage-container">
+      <div class="stage">
+        <iframe 
+          src="https://www.youtube.com/embed/daOtDSlTO3s?autoplay=1&mute=1" 
+          title="YouTube live" 
+          frameborder="0" 
+          allow="autoplay; encrypted-media" 
+          allowfullscreen
+          style="width:100%; height:100%; border:0">
+        </iframe>
+      </div>
+    </div>
+
+    <!-- Right Column: Sidebar -->
+    <div style="display: flex; flex-direction: column; gap: 20px;">
+      
+      <!-- Controls -->
+      <div class="panel">
+        <div class="panel-header">Configuration</div>
+        <div class="panel-body">
+          
+          <div class="control-group">
+            <button id="camBtn" class="btn btn-primary">
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+              Start Camera
+            </button>
+          </div>
+
+          <div class="control-group">
+            <div class="label-row"><span class="label-text">Model Accuracy</span></div>
+            <select id="modelSel">
+              <option value="lite">Lite (Fastest)</option>
+              <option value="full" selected>Full (Balanced)</option>
+              <option value="heavy">Heavy (Accurate)</option>
+            </select>
+          </div>
+
+          <div class="control-group">
+            <div class="toggle-wrapper">
+              <div>
+                <div class="label-text" style="margin-bottom:2px">ROS Stream</div>
+                <div style="font-size:11px; color:var(--muted)">Publish to WebSocket</div>
+              </div>
+              <label class="switch">
+                <input id="wsEnable" type="checkbox" disabled>
+                <span class="slider"></span>
+              </label>
             </div>
           </div>
-        </details>
 
-        <div class="stage">
-          <video id="video" playsinline muted></video>
-          <canvas id="overlay"></canvas>
         </div>
       </div>
 
-      <div>
-        <fieldset>
-          <legend>ROSBridge info</legend>
-          <div class="kv">
-            <div>rosbridge</div><div>wss://api.jaehho.com</div>
-            <div>pose topic</div><div>pose_landmarks</div>
-            <div>hand topic</div><div>hand_landmarks</div>
-            <div>FPS</div><div id="fps">0</div>
-            <div>Latency</div><div id="lat">0 ms</div>
+      <!-- Vision Feed (Sidebar) -->
+      <div class="panel" style="flex-grow:1; min-height:240px; display:flex; flex-direction:column;">
+        <div class="panel-header">Webcam Feed</div>
+        <div style="position:relative; flex-grow:1; background:#000; overflow:hidden;">
+          <video id="video" playsinline muted></video>
+          <canvas id="overlay"></canvas>
+          <div class="rec-indicator" id="recInd">
+            <div class="rec-dot"></div>
+            <span>LIVE</span>
           </div>
-        </fieldset>
+        </div>
       </div>
-    </div>
-    <!-- marvin livestream embed -->
-    <div class="stage" style="margin-top:20px">
-      <iframe width="560" height="315"
-        src="https://www.youtube.com/embed/daOtDSlTO3s?autoplay=1&mute=1"
-        title="YouTube live"
-        frameborder="0"
-        allow="autoplay; encrypted-media"
-        allowfullscreen>
-      </iframe>
+
+      <!-- Telemetry -->
+      <div class="panel">
+        <div class="panel-header">Telemetry</div>
+        <div class="stats-grid">
+          <div class="stat-item"><span class="stat-label">BRIDGE</span><span class="stat-value" id="bridgeUrl" style="font-size:11px">wss://marvin-rosbridge.jaehho.com</span></div>
+          <div class="stat-item"><span class="stat-label">POSE TOPIC</span><span class="stat-value">pose_landmarks</span></div>
+          <div class="stat-item"><span class="stat-label">HAND TOPIC</span><span class="stat-value">hand_landmarks</span></div>
+          <div class="stat-item"><span class="stat-label">FPS</span><span class="stat-value" id="fps">0</span></div>
+          <div class="stat-item"><span class="stat-label">LATENCY</span><span class="stat-value" id="lat">0 ms</span></div>
+        </div>
+      </div>
+
     </div>
   </div>
+</div>
 
-  <script type="module">
-    import { FilesetResolver, PoseLandmarker, HandLandmarker, DrawingUtils } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest";
+<script type="module">
+  // FIX: REMOVE /wasm from end of import
+  import { FilesetResolver, PoseLandmarker, HandLandmarker, DrawingUtils } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest";
 
-    const WS_URL = 'wss://api.jaehho.com';
-    const POSE_TOPIC = 'pose_landmarks';
-    const HAND_TOPIC = 'hand_landmarks';
+  // --- Console Noise Suppression ---
+  const origConsoleError = console.error;
+  console.error = (...args) => {
+    if (typeof args[0] === 'string' && args[0].includes('Created TensorFlow Lite XNNPACK delegate for CPU')) {
+      return; 
+    }
+    origConsoleError.apply(console, args);
+  };
 
-    const $ = (id)=>document.getElementById(id);
-    const el = {
-      video: $('video'), overlay: $('overlay'),
-      camBtn: $('camBtn'), model: $('modelSel'),
-      fps: $('fps'), lat: $('lat'), status: $('status'),
-      wsEnable: $('wsEnable')
-      // WebSocket detail elements removed
-    };
-    const ctx = el.overlay.getContext('2d');
+  const WS_URL = 'wss://marvin-rosbridge.jaehho.com';
+  const POSE_TOPIC = 'pose_landmarks';
+  const HAND_TOPIC = 'hand_landmarks';
 
-    let fileset, poseLM, handLM, stream, running=false;
-    let lastTs=performance.now(), frames=0;
-    let ws=null, lastSend=0, SEND_HZ=30;
-    let apiOk=false, hbTimer=null, svcSeq=0, pending=null;
+  const $ = (id)=>document.getElementById(id);
+  const el = {
+    video: $('video'), overlay: $('overlay'),
+    camBtn: $('camBtn'), model: $('modelSel'),
+    fps: $('fps'), lat: $('lat'), 
+    wsEnable: $('wsEnable'),
+    statusBadge: $('statusBadge'),
+    recInd: $('recInd'),
+    bridgeUrl: $('bridgeUrl')
+  };
+  const ctx = el.overlay.getContext('2d');
+  
+  el.bridgeUrl.textContent = WS_URL;
 
-    const MP_BASE = 'https://storage.googleapis.com/mediapipe-models';
-    const poseKeyToDir = { lite:'pose_landmarker_lite', full:'pose_landmarker_full', heavy:'pose_landmarker_heavy' };
-    const buildPoseURL = (key)=>`${MP_BASE}/pose_landmarker/${poseKeyToDir[key]}/float16/1/${poseKeyToDir[key]}.task`;
-    const HAND_MODEL_URL = `${MP_BASE}/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task`;
+  let fileset, poseLM, handLM, stream, running=false;
+  let loading=false;
+  let reconnectTimer=null; // Timer for reconnect logic
+  let lastTs=performance.now(), frames=0;
+  let ws=null, lastSend=0, SEND_HZ=30;
+  let apiOk=false, hbTimer=null, svcSeq=0, pending=null;
 
-    // --- message builders ---
-    const POSE_LABELS = {11:'left_shoulder',12:'right_shoulder',13:'left_elbow',14:'right_elbow',15:'left_wrist',16:'right_wrist',23:'left_hip',24:'right_hip'};
-    function buildPoseMsg(resultsPose){
-      const wl = resultsPose?.worldLandmarks?.[0];
-      if(!wl) return null;
-      const msg = { label: [], point: [] };
-      for(const i of Object.keys(POSE_LABELS)){
-        const idx=Number(i); const p=wl[idx]; if(!p) continue;
-        msg.label.push(POSE_LABELS[idx]);
-        msg.point.push({x:+p.x, y:+p.y, z:+p.z});
+  const MP_BASE = 'https://storage.googleapis.com/mediapipe-models';
+  const poseKeyToDir = { lite:'pose_landmarker_lite', full:'pose_landmarker_full', heavy:'pose_landmarker_heavy' };
+  const buildPoseURL = (key)=>`${MP_BASE}/pose_landmarker/${poseKeyToDir[key]}/float16/1/${poseKeyToDir[key]}.task`;
+  const HAND_MODEL_URL = `${MP_BASE}/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task`;
+
+  // --- message builders ---
+  const POSE_LABELS = {11:'left_shoulder',12:'right_shoulder',13:'left_elbow',14:'right_elbow',15:'left_wrist',16:'right_wrist',23:'left_hip',24:'right_hip'};
+  function buildPoseMsg(resultsPose){
+    const wl = resultsPose?.worldLandmarks?.[0];
+    if(!wl) return null;
+    const msg = { label: [], point: [] };
+    for(const i of Object.keys(POSE_LABELS)){
+      const idx=Number(i); const p=wl[idx]; if(!p) continue;
+      msg.label.push(POSE_LABELS[idx]);
+      msg.point.push({x:+p.x, y:+p.y, z:+p.z});
+    }
+    return (msg.point.length? msg : null);
+  }
+  function handIsOpen(lm){
+    const d=(i,j)=>{ const a=lm[i], b=lm[j]; return Math.hypot(a.x-b.x,a.y-b.b,a.z-b.z); };
+    const wrist=0, mcp=9, tips=[4,8,12,16,20];
+    const ref=d(wrist,mcp);
+    const closed=tips.reduce((acc,t)=>acc+(d(wrist,t)<ref?1:0),0);
+    return (closed<3);
+  }
+  function buildHandMsg(resultsHands){
+    const hands = resultsHands?.landmarks||[]; if(!hands.length) return null;
+    const msg = { label: [], status: [] };
+    const handed = resultsHands.handedness||[];
+    for(let i=0;i<hands.length;i++){
+      const label=(handed[i]?.[0]?.categoryName||'unknown').toLowerCase()+"_hand";
+      msg.label.push(label);
+      msg.status.push(!!handIsOpen(hands[i]));
+    }
+    return (msg.label.length? msg : null);
+  }
+
+  // --- publisher ---
+  function publish(topic, msg){
+    if(!ws || ws.readyState!==WebSocket.OPEN) return;
+    try{ ws.send(JSON.stringify({op:'publish', topic, msg})); }
+    catch(e){ /* ignore publish errors */ }
+  }
+
+  // UI State Management
+  const updateUIState = (customError = null) => {
+    // Reset toggle classes first
+    el.wsEnable.classList.remove('reconnecting');
+
+    if (loading) {
+      el.camBtn.innerHTML = `<svg width="16" height="16" class="spin" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v4m0 8v4m8-8h-4M4 12H0m17.66-5.66l-2.83 2.83m-8.48 8.48l-2.83 2.83M18.34 18.34l-2.83-2.83M5.66 5.66l2.83 2.83"/></svg> Loading Models...`;
+      el.camBtn.disabled = true;
+      el.camBtn.classList.replace('btn-outline', 'btn-primary');
+      el.statusBadge.textContent = 'Initializing';
+      el.statusBadge.className = 'badge badge-warn';
+      el.recInd.classList.remove('active');
+      return;
+    }
+
+    if (customError) {
+      el.statusBadge.textContent = customError;
+      el.statusBadge.className = 'badge badge-error';
+      el.recInd.classList.remove('active');
+      el.camBtn.innerHTML = `<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Try Again`;
+      el.camBtn.classList.replace('btn-outline', 'btn-primary');
+      el.camBtn.style.color = '';
+      el.camBtn.style.borderColor = '';
+      el.camBtn.disabled = false;
+      return;
+    }
+
+    el.camBtn.disabled = false;
+
+    if (!running) {
+      el.statusBadge.textContent = 'Stopped';
+      el.statusBadge.className = 'badge badge-gray';
+      el.recInd.classList.remove('active');
+    } else {
+      if (apiOk) {
+        el.statusBadge.textContent = 'Streaming';
+        el.statusBadge.className = 'badge badge-green';
+        el.recInd.classList.add('active');
+      } else if (reconnectTimer) {
+        el.statusBadge.textContent = 'Reconnecting (5s)...';
+        el.statusBadge.className = 'badge badge-warn';
+        el.recInd.classList.remove('active');
+        el.wsEnable.classList.add('reconnecting'); // Apply yellow class
+      } else if (ws && (ws.readyState === WebSocket.CONNECTING || ws.readyState === WebSocket.OPEN)) {
+        el.statusBadge.textContent = 'Connecting...';
+        el.statusBadge.className = 'badge badge-warn';
+        el.recInd.classList.remove('active');
+        el.wsEnable.classList.add('reconnecting'); // Apply yellow class
+      } else {
+        el.statusBadge.textContent = 'Local Only';
+        el.statusBadge.className = 'badge badge-gray';
+        el.recInd.classList.remove('active');
       }
-      return (msg.point.length? msg : null);
     }
-    function handIsOpen(lm){
-      const d=(i,j)=>{ const a=lm[i], b=lm[j]; return Math.hypot(a.x-b.x,a.y-b.y,a.z-b.z); };
-      const wrist=0, mcp=9, tips=[4,8,12,16,20];
-      const ref=d(wrist,mcp);
-      const closed=tips.reduce((acc,t)=>acc+(d(wrist,t)<ref?1:0),0);
-      return (closed<3);
+    
+    el.camBtn.innerHTML = running 
+      ? `<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/></svg> Stop Camera`
+      : `<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Start Camera`;
+      
+    if(running) {
+        el.camBtn.classList.replace('btn-primary', 'btn-outline');
+        el.camBtn.style.color = '#ef4444';
+        el.camBtn.style.borderColor = '#ef4444';
+    } else {
+        el.camBtn.classList.replace('btn-outline', 'btn-primary');
+        el.camBtn.style.color = '';
+        el.camBtn.style.borderColor = '';
     }
-    function buildHandMsg(resultsHands){
-      const hands = resultsHands?.landmarks||[]; if(!hands.length) return null;
-      const msg = { label: [], status: [] };
-      const handed = resultsHands.handedness||[];
-      for(let i=0;i<hands.length;i++){
-        const label=(handed[i]?.[0]?.categoryName||'unknown').toLowerCase()+"_hand";
-        msg.label.push(label);
-        msg.status.push(!!handIsOpen(hands[i]));
-      }
-      return (msg.label.length? msg : null);
+  };
+
+  const ensureFileset = async()=> fileset ||= await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm");
+
+  async function createPose(key){
+    const fs = await ensureFileset();
+    poseLM = await PoseLandmarker.createFromOptions(fs, {
+      baseOptions:{ modelAssetPath: buildPoseURL(key) },
+      runningMode:'VIDEO', numPoses:1
+    });
+  }
+
+  async function createHands(){
+    const fs = await ensureFileset();
+    handLM = await HandLandmarker.createFromOptions(fs, {
+      baseOptions:{ modelAssetPath: HAND_MODEL_URL },
+      runningMode:'VIDEO', numHands:2
+    });
+  }
+
+  const ensureModels = async()=>{
+    if(!poseLM) await createPose(el.model.value);
+    if(!handLM) await createHands();
+  };
+
+  function draw(resultsPose, resultsHands){
+    ctx.clearRect(0,0,el.overlay.width,el.overlay.height);
+    const utils=new DrawingUtils(ctx);
+    const lmPose=resultsPose?.landmarks||[];
+    for(const lm of lmPose){ 
+        utils.drawLandmarks(lm,{radius:3, color:'#3b82f6', lineWidth:1}); 
+        utils.drawConnectors(lm, PoseLandmarker.POSE_CONNECTIONS, {color:'rgba(255,255,255,0.5)', lineWidth:2}); 
     }
-
-    // --- publisher ---
-    function publish(topic, msg){
-      if(!ws || ws.readyState!==WebSocket.OPEN) return;
-      try{ ws.send(JSON.stringify({op:'publish', topic, msg})); }
-      catch(e){ /* ignore publish errors */ }
+    const lmHands=resultsHands?.landmarks||[];
+    for(const lm of lmHands){ 
+        utils.drawLandmarks(lm,{radius:2, color:'#22c55e', lineWidth:1}); 
+        utils.drawConnectors(lm, HandLandmarker.HAND_CONNECTIONS, {color:'rgba(255,255,255,0.5)', lineWidth:2}); 
     }
+  }
 
-    const setStatus = (s)=>{ el.status.textContent=s };
-    const nowStr = ()=> new Date().toLocaleTimeString();
-    const setWsInfo = (state, evt=null, err=null)=>{ /* UI removed */ };
-    const refreshStatus = ()=>{ setStatus(!running? 'stopped' : (apiOk? 'streaming' : 'recording')); };
+  function updateStats(resultsPose,startTs){
+    const now=performance.now();
+    if(++frames && now-lastTs>=500){ const fps=Math.round((frames*1000)/(now-lastTs)); el.fps.textContent=String(fps); frames=0; lastTs=now; }
+    const lat=Math.round(now-startTs); el.lat.textContent=lat+" ms";
+  }
 
-    const ensureFileset = async()=> fileset ||= await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm");
-
-    async function createPose(key){
-      const fs = await ensureFileset();
-      poseLM = await PoseLandmarker.createFromOptions(fs, {
-        baseOptions:{ modelAssetPath: buildPoseURL(key) },
-        runningMode:'VIDEO', numPoses:1
-      });
+  async function loop(){
+    if(!running) return;
+    const ts=performance.now();
+    let rPose={}, rHands={};
+    try{ rPose=await poseLM.detectForVideo(el.video,ts);}catch{}
+    try{ rHands=await handLM.detectForVideo(el.video,ts);}catch{}
+    draw(rPose, rHands);
+    updateStats(rPose,ts);
+    if(ws?.readyState===WebSocket.OPEN){
+      sendPose(rPose);
+      sendHands(rHands);
     }
+    requestAnimationFrame(loop);
+  }
 
-    async function createHands(){
-      const fs = await ensureFileset();
-      handLM = await HandLandmarker.createFromOptions(fs, {
-        baseOptions:{ modelAssetPath: HAND_MODEL_URL },
-        runningMode:'VIDEO', numHands:2
-      });
-    }
-
-    const ensureModels = async()=>{
-      if(!poseLM) await createPose(el.model.value);
-      if(!handLM) await createHands();
-    };
-
-    function draw(resultsPose, resultsHands){
-      ctx.clearRect(0,0,el.overlay.width,el.overlay.height);
-      const utils=new DrawingUtils(ctx);
-      const lmPose=resultsPose?.landmarks||[];
-      for(const lm of lmPose){ utils.drawLandmarks(lm,{radius:2}); utils.drawConnectors(lm, PoseLandmarker.POSE_CONNECTIONS); }
-      const lmHands=resultsHands?.landmarks||[];
-      for(const lm of lmHands){ utils.drawLandmarks(lm,{radius:2}); utils.drawConnectors(lm, HandLandmarker.HAND_CONNECTIONS); }
-    }
-
-    function updateStats(resultsPose,startTs){
-      const now=performance.now();
-      if(++frames && now-lastTs>=500){ const fps=Math.round((frames*1000)/(now-lastTs)); el.fps.textContent=String(fps); frames=0; lastTs=now; }
-      const lat=Math.round(now-startTs); el.lat.textContent=lat+" ms";
-    }
-
-    async function loop(){
-      if(!running) return;
-      const ts=performance.now();
-      let rPose={}, rHands={};
-      try{ rPose=await poseLM.detectForVideo(el.video,ts);}catch{}
-      try{ rHands=await handLM.detectForVideo(el.video,ts);}catch{}
-      draw(rPose, rHands);
-      updateStats(rPose,ts);
-      if(ws?.readyState===WebSocket.OPEN){
-        sendPose(rPose);
-        sendHands(rHands);
-      }
-      requestAnimationFrame(loop);
-    }
-
-    // --- rosbridge confirm via rosapi, plus auto-off on failure ---
-    function callRosapiGetTime(timeoutMs=2000){
-      if(!ws || ws.readyState!==WebSocket.OPEN) return Promise.resolve(false);
-      return new Promise((resolve)=>{
-        const id = `svc_${Date.now()}_${svcSeq++}`;
-        pending = (m)=>{
-          if(m.op==='service_response' && m.id===id){ const ok = !!m.result; pending=null; resolve(ok); }
-        };
-        try{ ws.send(JSON.stringify({op:'call_service', service:'/rosapi/get_time', args:{}, id})); }
-        catch(e){ pending=null; resolve(false); }
-        setTimeout(()=>{ if(pending){ pending=null; resolve(false); } }, timeoutMs);
-      });
-    }
-
-    function startHeartbeat(){
-      stopHeartbeat();
-      hbTimer = setInterval(async()=>{
-        const ok = await callRosapiGetTime(1500);
-        apiOk = ok; refreshStatus();
-      }, 5000);
-    }
-    function stopHeartbeat(){ if(hbTimer){ clearInterval(hbTimer); hbTimer=null; } }
-
-    function wsConnect(){
-      wsClose(); apiOk=false; refreshStatus();
-      try{ ws=new WebSocket(WS_URL); }
-      catch(e){ setWsInfo('error', 'constructor', String(e)); failStreamToggle(); return; }
-      setWsInfo('connecting', 'connecting '+nowStr(), null);
-      ws.onmessage=(ev)=>{ try{ const m=JSON.parse(ev.data); if(pending) pending(m); }catch{} };
-      ws.onopen=async()=>{
-        setWsInfo('open', 'open '+nowStr(), null);
-        const ok = await callRosapiGetTime(2000);
-        if(ok){
-          apiOk=true;
-          try{ ws.send(JSON.stringify({ op:'advertise', topic: POSE_TOPIC, type:'custom_interfaces/PoseLandmark' })); }catch{}
-          try{ ws.send(JSON.stringify({ op:'advertise', topic: HAND_TOPIC, type:'custom_interfaces/HandLandmark' })); }catch{}
-          startHeartbeat();
-        } else {
-          apiOk=false; setWsInfo('error','rosapi timeout '+nowStr(),'no service response'); failStreamToggle();
-        }
-        refreshStatus();
+  // --- rosbridge confirm via rosapi, plus auto-off on failure ---
+  function callRosapiGetTime(timeoutMs=2000){
+    if(!ws || ws.readyState!==WebSocket.OPEN) return Promise.resolve(false);
+    return new Promise((resolve)=>{
+      const id = `svc_${Date.now()}_${svcSeq++}`;
+      pending = (m)=>{
+        if(m.op==='service_response' && m.id===id){ const ok = !!m.result; pending=null; resolve(ok); }
       };
-      ws.onerror=(e)=>{ setWsInfo('error','error '+nowStr(), e?.message||'error'); failStreamToggle(); refreshStatus(); };
-      ws.onclose=()=>{ setWsInfo('closed','close '+nowStr(), null); apiOk=false; stopHeartbeat(); failStreamToggle(false); refreshStatus(); };
-    }
+      try{ ws.send(JSON.stringify({op:'call_service', service:'/rosapi/get_time', args:{}, id})); }
+      catch(e){ pending=null; resolve(false); }
+      setTimeout(()=>{ if(pending){ pending=null; resolve(false); } }, timeoutMs);
+    });
+  }
 
-    function wsClose(){
-      stopHeartbeat();
-      try{ ws?.close(); }catch{}
-      ws=null; apiOk=false; setWsInfo('closed','closed '+nowStr(), null); refreshStatus();
-    }
+  function startHeartbeat(){
+    stopHeartbeat();
+    hbTimer = setInterval(async()=>{
+      const ok = await callRosapiGetTime(1500);
+      apiOk = ok; updateUIState();
+    }, 5000);
+  }
+  function stopHeartbeat(){ if(hbTimer){ clearInterval(hbTimer); hbTimer=null; } }
 
-    function failStreamToggle(hard=true){
-      // Auto switch off the UI toggle on WS failures
-      el.wsEnable.checked = false; if(hard) el.wsEnable.blur();
-    }
+  // RECONNECTION LOGIC
+  function scheduleReconnect() {
+    if (reconnectTimer || !el.wsEnable.checked) return;
+    reconnectTimer = setTimeout(() => {
+      reconnectTimer = null;
+      if (el.wsEnable.checked) wsConnect();
+    }, 5000);
+    updateUIState();
+  }
 
-    function sendPose(rPose){
-      const now=performance.now();
-      if(now-lastSend<1000/SEND_HZ) return;
-      lastSend=now;
-      if(!apiOk) return; // only when confirmed
-      const msg=buildPoseMsg(rPose);
-      if(msg) publish(POSE_TOPIC, msg);
-    }
-    function sendHands(rHands){
-      if(!apiOk) return;
-      const msg=buildHandMsg(rHands);
-      if(msg) publish(HAND_TOPIC, msg);
-    }
+  function wsConnect(){
+    // Clear timer if manually connecting/reconnecting
+    if(reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
 
-    async function start(){
-      if(running) return;
+    // Close existing connection without unchecking UI
+    try{ ws?.close(); }catch{} 
+    ws = null; 
+    apiOk = false; 
+    updateUIState();
+
+    try{ ws=new WebSocket(WS_URL); }
+    catch(e){ 
+      console.error(e);
+      scheduleReconnect(); 
+      return; 
+    }
+    
+    ws.onmessage=(ev)=>{ try{ const m=JSON.parse(ev.data); if(pending) pending(m); }catch{} };
+    ws.onopen=async()=>{
+      const ok = await callRosapiGetTime(2000);
+      if(ok){
+        apiOk=true;
+        try{ ws.send(JSON.stringify({ op:'advertise', topic: POSE_TOPIC, type:'custom_interfaces/PoseLandmark' })); }catch{}
+        try{ ws.send(JSON.stringify({ op:'advertise', topic: HAND_TOPIC, type:'custom_interfaces/HandLandmark' })); }catch{}
+        startHeartbeat();
+      } else {
+        apiOk=false; 
+        ws.close(); // ROSAPI failed, treat as conn failure => trigger close => trigger reconnect
+      }
+      updateUIState();
+    };
+    
+    ws.onerror=(e)=>{ 
+       updateUIState(); 
+       // onerror usually followed by onclose, which handles reconnect
+    };
+    ws.onclose=()=>{ 
+      apiOk=false; 
+      stopHeartbeat(); 
+      if(el.wsEnable.checked) scheduleReconnect();
+      updateUIState(); 
+    };
+  }
+
+  function wsClose(){
+    if(reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer=null; }
+    stopHeartbeat();
+    try{ ws?.close(); }catch{}
+    ws=null; apiOk=false; 
+    updateUIState();
+  }
+
+  function sendPose(rPose){
+    const now=performance.now();
+    if(now-lastSend<1000/SEND_HZ) return;
+    lastSend=now;
+    if(!apiOk) return; // only when confirmed
+    const msg=buildPoseMsg(rPose);
+    if(msg) publish(POSE_TOPIC, msg);
+  }
+  function sendHands(rHands){
+    if(!apiOk) return;
+    const msg=buildHandMsg(rHands);
+    if(msg) publish(HAND_TOPIC, msg);
+  }
+
+  async function start(){
+    if(running) return;
+    
+    loading = true;
+    updateUIState();
+    
+    try {
       await ensureModels();
       const streamConstraints = { video:{ facingMode:'user' }, audio:false };
       stream = await navigator.mediaDevices.getUserMedia(streamConstraints);
       el.video.srcObject = stream; await el.video.play();
       el.overlay.width = el.video.videoWidth; el.overlay.height = el.video.videoHeight;
-      running = true; el.camBtn.textContent='Stop camera';
+      running = true; 
       el.wsEnable.disabled = false;
       if(el.wsEnable.checked) wsConnect();
-      refreshStatus();
+      
+      loading = false;
+      updateUIState();
       loop();
-    }
 
-    function stop(){
-      running = false;
-      stream?.getTracks().forEach(t=>t.stop()); stream=null;
-      el.camBtn.textContent='Start camera';
-      el.wsEnable.disabled = true; el.wsEnable.checked=false;
-      ctx.clearRect(0,0,el.overlay.width,el.overlay.height);
-      wsClose();
-      refreshStatus();
+    } catch(e) {
+      console.error("Initialization failed:", e);
+      loading = false;
+      let errorMsg = "Camera Error";
+      if (e.name === 'NotAllowedError' || e.name === 'SecurityError') {
+        errorMsg = "Permission Denied";
+      } else if (e.name === 'NotFoundError') {
+        errorMsg = "No Camera Found";
+      } else if (e.name === 'NotReadableError' || e.name === 'OverconstrainedError') {
+        errorMsg = "Camera Busy";
+      }
+      
+      updateUIState(errorMsg);
     }
+  }
 
-    el.camBtn.addEventListener('click',()=>{ running? stop(): start(); });
-    el.model.addEventListener('change', async()=>{ if(poseLM){poseLM.close?.(); poseLM=null} await createPose(el.model.value) });
-    el.wsEnable.addEventListener('change',()=>{ if(running){
-      if(el.wsEnable.checked){ wsConnect(); }
-      else{ wsClose(); }
-      refreshStatus();
-    }});
-  </script>
+  function stop(){
+    running = false;
+    stream?.getTracks().forEach(t=>t.stop()); stream=null;
+    el.wsEnable.disabled = true; el.wsEnable.checked=false;
+    ctx.clearRect(0,0,el.overlay.width,el.overlay.height);
+    wsClose();
+    updateUIState();
+  }
+
+  el.camBtn.addEventListener('click',()=>{ running? stop(): start(); });
+  el.model.addEventListener('change', async()=>{ if(poseLM){poseLM.close?.(); poseLM=null} await createPose(el.model.value) });
+  el.wsEnable.addEventListener('change',()=>{ if(running){
+    if(el.wsEnable.checked){ wsConnect(); }
+    else{ wsClose(); }
+    updateUIState();
+  }});
+  
+  // Initialize UI
+  updateUIState();
+</script>
 </body>
 </html>
