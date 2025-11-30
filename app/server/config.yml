@@ -6,8 +6,7 @@ tunnel: ceb2c9a8-4565-41b9-bf99-8b38a579e55b
 credentials-file: /home/jaeho/.cloudflared/ceb2c9a8-4565-41b9-bf99-8b38a579e55b.json
 
 ingress:
-  - hostname: cvat.jaehho.com
-    service: http://localhost:8080
+# ... other ingress rules ...
   - hostname: marvin-rosbridge.jaehho.com
     service: http://localhost:9090
   - service: http_status:404

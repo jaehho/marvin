@@ -1,0 +1,17 @@
+[Unit]
+Description=ROS2 Rosbridge WebSocket Service
+After=network.target
+
+[Service]
+Type=simple
+User=jaeho
+Environment="ROS_DOMAIN_ID=0"
+# Load your ROS 2 environment
+ExecStart=/bin/bash -c "source /opt/ros/jazzy/setup.bash && \
+    source /home/jaeho/marvin/ros2_ws/install/setup.bash && \
+    ros2 launch rosbridge_server rosbridge_websocket_launch.xml delay_between_messages:=0.0"
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target
