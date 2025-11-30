@@ -1,3 +1,5 @@
+# copy to /etc/systemd/system/rosbridge.service
+# sudo cp /home/jaeho/marvin/app/server/rosbridge.service /etc/systemd/system/rosbridge.service
 [Unit]
 Description=ROS2 Rosbridge WebSocket Service
 After=network.target
