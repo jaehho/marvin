@@ -1,3 +1,6 @@
 log
 build
 install
+
+# Python Ignore
+__pycache__/
