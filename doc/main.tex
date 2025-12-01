@@ -40,7 +40,7 @@
 \renewcommand{\shortauthors}{Cho and Klymchuk}
 
 \begin{abstract}
-MARVIN is a dual-arm teleoperational robot that mirrors a human operator's upper-body motion in real time using just a standard webcam. Client-side MediaPipe models extract 3D pose and hand landmarks, which are transmitted via websocket to a ROS2-MoveIt servoing stack that commands two OpenManipulator-X arms. We detail perception-to-actuation mappings, including geometric formulations for joint angles, and describe a web interface that enables intuitive interaction. We report user survey results from local and remote operation, and discuss ethical and societal impacts.
+MARVIN is a dual-arm teleoperational robot that mirrors a human operator's upper-body motion in real time using just a standard webcam. Client-side MediaPipe models extract 3D pose and hand landmarks, which are transmitted via websocket to a ROS2-MoveIt servoing stack that commands two OpenManipulator-X arms. We detail perception-to-actuation mappings, including geometric formulations for joint angles, and describe a web interface that enables intuitive interaction. We report qualitative user feedback from local and remote operation, and discuss ethical and societal impacts.
 \end{abstract}
 
 %%
@@ -80,9 +80,9 @@ MARVIN is a dual-arm teleoperational robot that mirrors a human operator's upper
 \maketitle
 
 \section{Introduction}
-MARVIN is a teleoperational robot that mirrors the upper-body movements of a human operator in real time. Operation works via a local webcam or a remote connection, where a web application captures the user's webcam stream for pose landmarking, enabling MARVIN to act as a physical avatar across any distance.
+MARVIN is a teleoperational robot that mirrors the upper-body movements of a human operator with low-latency streaming. Operation works via a local webcam or a remote connection, where a web application captures the user's webcam stream for pose landmarking, enabling MARVIN to act as a physical avatar across any distance.
 
-MARVIN explores the theme of the 2026 SDC theme of Sensory Rituals through the design of a remotely-operated humanoid robot that reintroduces physicality into digital communication. Contemporarily, much of interpersonal digital interaction occurs via screen-based interfaces that flatten embodied and sensory engagement. Via MARVIN, we seek to restore a sense of physical presence to virtual meetings by allowing its users to inhabit a robot equipped with two controllable arms. By remotely manipulating the robot via one's own mirrored actions, tangible social connection can be had at-distance, enabling the operator to perform actions, express intentions, and interact with physical environments shared by the receiver.
+MARVIN explores the 2026 SDC theme of Sensory Rituals through the design of a remotely-operated humanoid robot that reintroduces physicality into digital communication. Currently, much of interpersonal digital interaction occurs via screen-based interfaces that flatten embodied and sensory engagement. Via MARVIN, we seek to restore a sense of physical presence to virtual meetings by allowing its users to inhabit a robot equipped with two controllable arms. By manipulating the robot via one's own mirrored actions, tangible social connection can be established remotely, enabling the operator to perform actions, express intentions, and interact with physical environments shared by the receiver.
 
 Furthermore, MARVIN is an accessible platform, as it requires only a standard webcam and Internet interface, which extends this ritual to many users, with only minimal technological barriers. Via its integration of physical interaction and accessibility, MARVIN allows tangible rituals of connection to emerge out of separation.
 
@@ -90,10 +90,10 @@ Furthermore, MARVIN is an accessible platform, as it requires only a standard we
 \subsection{Hardware And Software Integration}
 MARVIN uses components from the ROBOTIS OpenManipulator-X platform. Each arm has 5 degrees-of-freedom and is powered by Dynamixel XM430-W350 servos. We utilize two arms attached to an aluminum-beam torso and powered via a Dynamixel U2D2 power hub.
 
-MARVIN runs on the Humble distribution of ROS2. MoveIt handles high-level motion planning and translates user commands into low-level Dynamixel controller commands. A custom Unified Robot Description File (URDF) model, which was modified from ROBOTIS's package \cite{OpenManipulator2025}, encodes kinematic, inertial, and control interfaces for both arms.
+MARVIN runs on the Humble distribution of ROS2. MoveIt handles high-level motion planning and translates user commands into low-level Dynamixel controller commands. A custom Unified Robot Description File (URDF) model, which was modified from ROBOTIS's package \cite{open_manipulator}, encodes kinematic, inertial, and control interfaces for both arms.
 
 \subsection{Pose Detection}
-OpenCV interfaces a MediaPipe-based pose detector to extract normalized 3D joint landmarks from a webcam stream \cite{noauthor_mediapipe_nodate}. We use shoulder (11,12), elbow (13,14), wrist (15,16), and hip (23,24) landmarks to compute our desired joint angles. Figure \ref{fig:landmarks-comparison} displays the landmark labelling scheme.
+OpenCV interfaces a MediaPipe-based pose detector to extract normalized 3D joint landmarks from a webcam stream \cite{google_mediapipe_guide}. We use shoulder (11,12), elbow (13,14), wrist (15,16), and hip (23,24) landmarks to compute our desired joint angles. Figure \ref{fig:landmarks-comparison} displays the landmark labelling scheme.
 
 For each side (left and right), let $S$, $E$, $W$, $H$, $H_{opp}$ be the 3D position vectors of the shoulder, elbow, wrist, same-side hip, and opposite hip, respectively. Then define:
 
@@ -143,13 +143,13 @@ Using the Hand Landmarker (labels shown in Figure \ref{fig:landmarks-comparison}
     \includegraphics[width=\linewidth]{assets/hand-landmarks.png}
     \Description{A diagram of a hand with 21 labeled landmarks, including wrist, palm, and finger joints.}
   \end{subfigure}
-  \caption{Comparison of MediaPipe landmark models. (a) Pose Landmarks \cite{PoseLandmarkDetection}: the model tracks 33 landmark locations representing the approximate positions of labeled body parts. (b) Hand Landmarks \cite{HandLandmarksDetection}: the model detects 21 hand-knuckle coordinates within the detected hand regions.}
+  \caption{Comparison of MediaPipe landmark models. (a) Pose Landmarks \cite{google_pose_landmarks}: the model tracks 33 landmark locations representing the approximate positions of labeled body parts. (b) Hand Landmarks \cite{google_hand_landmarks}: the model detects 21 hand-knuckle coordinates within the detected hand regions.}
   \label{fig:landmarks-comparison}
 \end{figure}
 
 
 \subsection{Control}
-We use MoveIt real-time servoing with one independent kinematic chain per arm. Each chain is associated with a servoing node that subscribes to desired joint velocities. These velocities are computed from the error between target (mirrored) joint angles and current joint states from the \texttt{/joint\_states} topic, before being scaled by gains and sent as velocity \texttt{JointJog} commands. With a previous incident of MARVIN damaging itself during testing \cite{rosegebhardtvevoHRI2021Affordable2021}, we implemented several safety measures. We enforce velocity, position, and current limits at the controller, while MoveIt predicts and prevents self-collisions via planning scene simulations and pre-computed collision matrices.
+We use MoveIt real-time servoing with one independent kinematic chain per arm. Each chain is associated with a servoing node that subscribes to desired joint velocities. These velocities are computed from the error between target (mirrored) joint angles and current joint states from the \texttt{/joint\_states} topic, before being scaled by gains and sent as velocity \texttt{JointJog} commands. With a previous incident of MARVIN damaging itself during testing \cite{gebhardt_hri_2021}, we implemented several safety measures. We enforce velocity, position, and current limits at the controller, while MoveIt predicts and prevents self-collisions via planning scene simulations and pre-computed collision matrices.
 The ROS2 node architecture can be found at \url{MARVIN.ee.cooper.edu/assets/rosgraph.png}.
 % Figure \ref{fig:rosgraph} shows the ROS2 node and topic architecture.
 
@@ -169,7 +169,7 @@ Implemented entirely in client-side JavaScript using the MediaPipe Tasks API, th
 \begin{figure}[tbp]
   \centering
   \includegraphics[width=.8\linewidth]{assets/marvin_L} 
-  \caption{Screenshot of MARVIN website: livestream of MARVIN on left, webcam feed and landmark overlay to the right. Connection information below MARVIN livestream and controls above webcam feed.}
+  \caption{Screenshot of MARVIN website during remote operation: livestream of MARVIN on left, webcam feed and landmark overlay to the right. Connection information below and controls above webcam feed.}
   \Description{A screenshot of the web interface showing video feed, control buttons, and status indicators.}
   \label{fig:web}
 \end{figure}
@@ -189,9 +189,11 @@ The communication pipeline is illustrated at \url{MARVIN.ee.cooper.edu/assets/co
 \section{Results and Discussion}
 MARVIN was tested in local operation during the Cooper Union End of Year Show of May 2025. The robot mirrored onlooker movements in real time, and we received qualitative feedback requesting the addition of hand gestures for a more natural feeling. This informed subsequent implementation of the hand landmark module and gripper control. 
 
-We additionally tested remote operation of MARVIN with peer volunteers from the Cooper Union community. Participants controlled MARVIN from a separate room via the website. Despite latency optimization attempts, there is noticeable lag between operator movement and livestream video, with an average round-trip time of \textit{~3} s. The delay includes the the websocket transmission time, processing time on the ROS2 side, and return Youtube streaming lag.
+We additionally tested remote operation of MARVIN with peer volunteers from the Cooper Union community. Participants controlled MARVIN from a separate room via the website. Despite latency optimization attempts, there is noticeable lag between operator movement and livestream video, with an average round-trip time of \textit{~3} s. 
+% The delay includes the websocket transmission time, processing time on the ROS2 side, and most significantly, return Youtube streaming lag.
+The delay includes WebSocket transmission and ROS2 processing, but is dominated by the return YouTube streaming lag. A WebRTC implementation was attempted to mitigate this but was temporarily deferred due its requirement for a dedicated signaling server. Future iterations will incorporate this infrastructure to minimize buffering.
 
-MARVIN demonstrates that fully client-side inference is viable for dual-arm mirroring. Remaining gaps include wrist pronation/supination estimation, depth ambiguity in monocular input, and gripper force control. Future work includes (1) integrating depth perception, (2) incorporating joint configurations and kinematic structures more closely aligned with human anatomy, (3) self-calibration, and (4) extending to mobile bases for extended telepresence.
+MARVIN demonstrates that fully client-side inference is viable for dual-arm mirroring. Remaining gaps include wrist pronation/supination estimation, depth ambiguity in monocular input, and gripper force control. Future work includes (1) integrating depth perception, (2) incorporating joint configurations and kinematic structures more closely aligned with human anatomy, and (3) extending to mobile bases for extended telepresence.
 
 We recognize that telepresence expands access but raises safety and privacy concerns. As all image processing happens client-side, we transmit only necessary landmark data that does not include any identifying user information, including the webcam feed.
 
