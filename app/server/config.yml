@@ -2,11 +2,11 @@
 # run the following commands to link this config file to cloudflared service config location
 # sudo rm /etc/cloudflared/config.yml
 # sudo ln -s /home/jaeho/marvin/app/server/config.yml /etc/cloudflared/config.yml
-tunnel: ceb2c9a8-4565-41b9-bf99-8b38a579e55b
-credentials-file: /home/jaeho/.cloudflared/ceb2c9a8-4565-41b9-bf99-8b38a579e55b.json
+tunnel: 185347c1-848c-425f-8cb6-05c7a93fa539
+credentials-file: /home/jaeho/.cloudflared/185347c1-848c-425f-8cb6-05c7a93fa539.json
 
 ingress:
 # ... other ingress rules ...
-  - hostname: marvin-rosbridge.jaehho.com
+  - hostname: marvin-laptop-rosbridge.jaehho.com
     service: http://localhost:9090
   - service: http_status:404
