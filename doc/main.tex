@@ -128,7 +128,7 @@ Using upper arm and forearm vectors $\mathbf{u}$ and $\mathbf{f}$, we estimate e
 and map $\theta$ to the third joint $J_3$ of each kinematic chain.
 
 \subsubsection{Hand Open/Close}
-Using the Hand Landmarker (labels shown in Figure \ref{fig:landmarks-comparisons}), define a reference length from wrist (0) to middle-finger MCP (9). We mark a hand as open if fewer than three fingertips among indices \{4,8,12,16,20\} lie closer to the wrist than the reference. We then publish binary open/closed messages to drive the gripper.
+Using the Hand Landmarker (labels shown in Figure \ref{fig:landmarks-comparison}), define a reference length from wrist (0) to middle-finger MCP (9). We mark a hand as open if fewer than three fingertips among indices \{4,8,12,16,20\} lie closer to the wrist than the reference. We then publish binary open/closed messages to drive the gripper.
 
 \begin{figure}[tbp]
   \centering
@@ -168,8 +168,8 @@ Implemented entirely in client-side JavaScript using the MediaPipe Tasks API, th
 
 \begin{figure}[tbp]
   \centering
-  \includegraphics[width=.8\linewidth]{assets/web} % TODO: use update ui
-  \caption{Screenshot of MARVIN website: livestream of MARVIN on left, webcam feed and landmark overlay to the right. Connection information below MARVIN livestream and controls below webcam feed.}
+  \includegraphics[width=.8\linewidth]{assets/marvin_L} 
+  \caption{Screenshot of MARVIN website: livestream of MARVIN on left, webcam feed and landmark overlay to the right. Connection information below MARVIN livestream and controls above webcam feed.}
   \Description{A screenshot of the web interface showing video feed, control buttons, and status indicators.}
   \label{fig:web}
 \end{figure}
